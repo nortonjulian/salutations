@@ -1,0 +1,15 @@
+{% extends 'home.html' %}
+
+{% block title %}Greetings{% endblock %}
+
+{% block content %}
+<div class="center">
+    <p>{{ verify }} </p>
+
+    <div>
+        <a href="/" id="edit_link">Edit</a>
+        <a href="/send" id="edit_send">Send</a>
+    </div>
+</div>
+
+{% endblock %}

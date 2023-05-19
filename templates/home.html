@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Greetings{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Send Mass Text Messages!</h1>
+
+    <form action="/edit" method="POST">
+        <label for="message">Message:</label>
+        <textarea name="message" id="message" cols="40" rows="15"></textarea>
+
+        <label for="recipients" id="recipients">Recipients:</label>
+        <input type="text" name="recipient" id="recipients" placeholder="Enter phone numbers separated by commas">
+
+        <input type="submit" id="submit" value="Send">
+    </form>
+    {% block content %}{% endblock %}
+</body>
+</html>

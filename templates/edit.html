@@ -1,15 +1,22 @@
-{% extends 'home.html' %}
+{% extends 'base.html' %}
 
 {% block title %}Greetings{% endblock %}
 
 {% block content %}
-<div class="center">
-    <p>{{ verify }} </p>
-
-    <div>
-        <a href="/" id="edit_link">Edit</a>
-        <a href="/send" id="edit_send">Send</a>
+<div id="edit_center">
+    <div class="center">
+        <p id="p_edit">{{ verify }}</p>
+    </div>
+    <div id="edit_buttons">
+        <a href="/send?message={{ message|urlencode }}&amp;recipients={{ recipients|join(',') }}" id="edit_link">Edit</a>
+        <form action="/send" method="POST">
+            {{ csrf_token() }}
+            <input type="hidden" name="message" value="{{ message }}" placeholder="Write your message">
+            {% for recipient in recipients %}
+                <input type="hidden" name="recipients[]" value="{{ recipient }}">
+            {% endfor %}
+            <button id="edit_send" name="submit">Send</button>
+        </form>
     </div>
 </div>
-
 {% endblock %}

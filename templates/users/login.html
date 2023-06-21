@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div>
+    {% if session['curr_user'] %}
+      <h2>Welcome Back!</h2>
+    {% endif %}
+      <form method="POST" action="/login" class="login-form">
+          {{ form.hidden_tag() }}
+
+          {% for field in form if field.widget.input_type != 'hidden' %}
+            {% for error in field.errors %}
+              <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+            {{ field(placeholder=field.label.text, class="form-control") }}
+          {% endfor %}
+          <button type="submit" id="login-link">Login</button>
+      </form>
+</div>
+{% endblock %}

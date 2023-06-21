@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Contact{% endblock %}
+
+{% block content %}
+  <div class="form-container">
+    <form method="POST" action="/contacts/{{ contact.id }}/update">
+      {{ form.csrf_token }}
+      <div>
+        <label for="first_name">First Name</label>
+        <input type="text" name="first_name" placeholder="First Name" value="{{ contact.first_name }}">
+      </div>
+      <div>
+        <label for="last_name">Last Name</label>
+        <input type="text" name="last_name" placeholder="Last Name" value="{{ contact.last_name }}">
+      </div>
+      <div>
+        <label for="number">Number</label>
+        <input type="number" name="number" placeholder="Number" value="{{ contact.number }}">
+      </div>
+      <button id="edit_contact" type="submit">Update</button>
+    </form>
+  </div>
+{% endblock %}

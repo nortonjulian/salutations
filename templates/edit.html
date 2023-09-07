@@ -10,9 +10,9 @@
     <div id="edit_buttons">
         <a href="/send?message={{ message|urlencode }}&amp;recipients={{ recipients|join(',') }}" id="edit_link">Edit</a>
         <form action="/send" method="POST">
-            {{ csrf_token() }}
-            <input type="hidden" name="message" value="{{ message }}" placeholder="Write your message">
-            {% for recipient in recipients %}
+            {{ form.csrf_token }}
+            <input type="hidden" name="message" value="{{ form.message.data }}" placeholder="Write your message">
+            {% for recipient in form.recipients.data %}
                 <input type="hidden" name="recipients[]" value="{{ recipient }}">
             {% endfor %}
             <button id="edit_send" name="submit">Send</button>

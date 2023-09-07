@@ -29,3 +29,5 @@ INSERT INTO contacts
   (username, first_name, last_name, number)
 VALUES
   ('abc', 'contact1', 'person', 1234567890);
+
+

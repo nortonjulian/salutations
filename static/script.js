@@ -51,7 +51,7 @@ window.addEventListener('load', function() {
     let textarea = document.getElementById("message");
     let storedMessage = localStorage.getItem("message");
     let urlMessage = "{{ request.args.get('message', '') }}";
-    
+
     if (textarea) {
       if (storedMessage) {
         textarea.value = storedMessage;
@@ -82,3 +82,5 @@ function toggleAllContacts() {
         selectAllLabel.textContent = 'Select All';
     }
 }
+
+

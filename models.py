@@ -13,7 +13,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.Text, nullable=False)
     last_name = db.Column(db.Text, nullable=False)
-    username= db.Column(db.Text, nullable=False)
+    username= db.Column(db.Text, nullable=False, unique=True)
     password = db.Column(db.Text, nullable=False, unique=True)
     email = db.Column(db.Text, nullable=False, unique=True)
 
@@ -51,11 +51,11 @@ class Contacts(db.Model):
     number = db.Column(db.Integer, nullable=False, unique=True)
 
     @classmethod
-    def add(cls, username, first_name, last_name, number):
+    def add(cls, user_id, first_name, last_name, number):
         """Add Contacts"""
 
         contact = Contacts(
-            username=username,
+            user_id=user_id,
             first_name=first_name,
             last_name=last_name,
             number=number,

@@ -50,7 +50,7 @@
                                     {% for contact in contacts %}
                                         <li id="contact_list">
                                             <label for="contact-{{ contact.id }}">
-                                                <input type="checkbox" class="contact-checkbox" value="{{ contact.first_name }} {{ contact.last_name }}">
+                                                <input type="checkbox" class="contact-checkbox" value="{{ contact.first_name }} {{ contact.last_name }}" data-contact-number="{{ contact.number }}"">
                                                 {{ contact.first_name }} {{ contact.last_name }} {{ contact.number }}
                                             </label>
                                         </li>
@@ -67,7 +67,7 @@
                                     <label for="recipients">Recipients:</label>
                                 </div>
                                 <input type="text" name="recipients" id="recipients" placeholder="Enter phone numbers separated by commas"
-                                    value="{% for contact in contacts %}{{ contact.first_name }}{{ contact.last_name }}, {% endfor %}">
+                                    value="">
                             </div>
                             <div class="message-container">
                                 <label for="message">Message:</label>

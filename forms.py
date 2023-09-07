@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField, IntegerField
+from wtforms import StringField, PasswordField, TextAreaField, IntegerField, FieldList, HiddenField
 from wtforms.validators import DataRequired, Email, Length
 
 class LoginForm(FlaskForm):
@@ -28,6 +28,9 @@ class ContactAddForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     number = IntegerField('Number', validators=[DataRequired()])
+    hidden_number = HiddenField('Hidden Number')
 
-class MessageUpdateForm(FlaskForm):
-    updated_message = TextAreaField('Updated Message', validators=[DataRequired()])
+
+class EditForm(FlaskForm):
+    message = TextAreaField('Message', validators=[DataRequired()])
+    recipients = FieldList(TextAreaField('Recipient'), min_entries=1)

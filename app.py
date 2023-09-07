@@ -2,7 +2,7 @@ from sqlite3 import IntegrityError
 from flask import Flask, render_template, request, redirect, session, flash, g, url_for
 from random import choice
 import os
-from forms import UserAddForm, LoginForm, ContactAddForm, MessageUpdateForm
+from forms import UserAddForm, LoginForm, ContactAddForm, EditForm
 from models import db, connect_db, User, Contacts
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
@@ -29,7 +29,6 @@ debug = DebugToolbarExtension(app)
 account_sid = os.environ.get('ACCOUNT_SID')
 auth_token = os.environ.get('AUTH_TOKEN')
 client = Client(account_sid, auth_token)
-
 
 @app.route('/')
 def home_page():
@@ -128,19 +127,29 @@ def add_contact():
     form = ContactAddForm()
 
     if form.validate_on_submit():
+        # Retrieve the submitted data from the form
+        user_id = form.username.data
+        first_name = form.first_name.data
+        last_name = form.last_name.data
+        number = form.number.data
+
+        # Retrieve the hidden number from the form data
+        hidden_number = request.form['hidden_number']
+
         try:
             contact = Contacts(
-                username=g.user.username,
-                first_name=form.first_name.data,
-                last_name=form.last_name.data,
-                number=form.number.data
+                user_id=g.user.username,
+                first_name=first_name,
+                last_name=last_name,
+                number=number,
+                hidden_number=hidden_number
             )
             db.session.add(contact)
             db.session.commit()
 
-            contacts = Contacts.query.filter_by(username=g.user.username).all()
+            contacts = Contacts.query.filter_by(user_id=g.user.username).all()
 
-            flash("Contact add successfully!", "success")
+            flash("Contact added successfully!", "success")
             return render_template("users/add_contacts.html", form=form, contacts=contacts)
 
         except IntegrityError:
@@ -187,36 +196,38 @@ def logout():
 
 @app.route('/edit', methods=['GET', 'POST'])
 def edit_message():
-    print("edit message")
-    print(request.form)
-    print(request.args)
+    form = EditForm()
+
     if request.method == 'POST':
-        messages = request.form['message']
-        recipients = request.form['recipients'].split(',')
-        success_recipients = []
+        message = request.form['message']
+        recipient_name = request.form['recipient']
 
-        print(recipients)
-
-        for recipient in recipients:
-            if recipient.strip() != '+18777649862':
-                try:
-                    client.messages.create(
-                    body=messages,
+        contact = Contacts.query.filter_by(username=g.user.username, first_name=recipient_name).first()
+        if contact:
+            recipient_number = contact.number
+            # Send the message to the recipient_number
+            # ...
+            try:
+                client.messages.create(
+                    body=message,
                     from_='+18777649862',
-                    to=recipient
-                    )
-                    success_recipients.append(recipient)
-                except TwilioRestException as e:
-                    print(f"Twilio Error: {str(e)}")
-
-        return redirect(url_for('send', message=messages, recipients=success_recipients))
+                    to=recipient_number
+                )
+            except TwilioRestException as e:
+                print(f"Twilio Error: {str(e)}")
+            verify = choice(INQUIRIES)
+            return render_template('edit.html', form=form, verify=verify, message=message, recipient=recipient_name)
+        else:
+            # Handle the case when the recipient name is not found
+            flash("Recipient name not found.", "danger")
+            return render_template('edit.html', form=form)
     else:
         message = request.args.get('message', '')
         recipient = request.args.get('recipient', '')
         verify = choice(INQUIRIES)
-        return render_template('edit.html', verify=verify, message=message, recipient=recipient)
+        return render_template('edit.html', form=form, message=message, recipient=recipient)
 
-@app.route('/send', methods=['POST'])
+@app.route('/send', methods=['GET', 'POST'])
 def send():
     if request.method == 'POST' and 'submit' in request.form:
         message = request.form['message']

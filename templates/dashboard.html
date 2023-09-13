@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 
-
     {% if contacts %}
-    <a href="/contacts">View Contacts</a>
+    <a class="input-bigger" href="/contacts">View Contacts</a>
     <div class="contact-header">
         <h3>Your Contacts:</h3>
-        <label>
+        <label class="input-bigger">
             <input type="checkbox" id="select-all-contacts"> Select All Contacts
         </label>
     </div>
@@ -32,7 +31,7 @@
             {% for contact in contacts %}
             <li>
                 <input type="checkbox" name="selected_contacts" value="{{ contact.id }}">
-                <label>
+                <label class="input-bigger">
                     {{ contact.first_name }} {{ contact.last_name }} ({{ contact.number }})
                 </label>
             </li>
@@ -40,7 +39,7 @@
         </ul>
 
         <div class="form-group">
-            {{ form.message.label(class="form-control-label") }}
+            {{ form.message.label(class="form-control-label input-bigger") }}
             {{ form.message(class="form-control") }}
         </div>
 

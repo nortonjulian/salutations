@@ -15,14 +15,14 @@
             <ul class="navbar-nav ml-auto">
                 {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                        <a class="nav-link nav-link-bigger" href="{{ url_for('logout') }}">Logout</a>
                     </li>
                 {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        <a class="nav-link nav-link-bigger" href="{{ url_for('login') }}">Login</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                        <a class="nav-link nav-link-bigger" href="{{ url_for('register') }}">Register</a>
                     </li>
                 {% endif %}
             </ul>
@@ -34,7 +34,7 @@
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <div class="alert alert-dismissible fade show" role="alert">
-                    <ul class="list-unstyled">
+                    <ul class="list-unstyled input-bigger">
                         {% for message in messages %}
                             <li>{{ message }}</li>
                         {% endfor %}

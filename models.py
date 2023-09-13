@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin  # Import UserMixin
 from itsdangerous import TimedSerializer as Serializer
 
-secret_key = current_app.config['SECRET_KEY']
+# secret_key = current_app.config['SECRET_KEY']
 
 # Create an instance of SQLAlchemy
 db = SQLAlchemy()
@@ -56,28 +56,28 @@ class User(db.Model, UserMixin):  # Inherit from UserMixin here
         """Check if the provided password matches the stored password hash."""
         return bcrypt.check_password_hash(self.password, password)
 
-    def get_reset_password_token(self, expires_in=600):
-        """
-        Generate a token for resetting the user's password.
-        :param expires_in: The expiration time for the token in seconds (default is 10 minutes).
-        :return: The generated token as a string.
-        """
-        s = Serializer(secret_key, expires_in)
-        return s.dumps({'reset_password': self.id}).decode('utf-8')
+    # def get_reset_password_token(self, expires_in=600):
+    #     """
+    #     Generate a token for resetting the user's password.
+    #     :param expires_in: The expiration time for the token in seconds (default is 10 minutes).
+    #     :return: The generated token as a string.
+    #     """
+    #     s = Serializer(current_app.config['SECRET_KEY'], expires_in)
+    #     return s.dumps({'reset_password': self.id}).decode('utf-8')
 
-    @staticmethod
-    def verify_reset_password_token(token):
-        """
-        Verify a password reset token and return the associated user.
-        :param token: The token to verify.
-        :return: The user associated with the token, or None if the token is invalid.
-        """
-        s = Serializer(app.config['SECRET_KEY'])
-        try:
-            data = s.loads(token)
-        except:
-            return None
-        return User.query.get(data.get('reset_password'))
+    # @staticmethod
+    # def verify_reset_password_token(token):
+    #     """
+    #     Verify a password reset token and return the associated user.
+    #     :param token: The token to verify.
+    #     :return: The user associated with the token, or None if the token is invalid.
+    #     """
+    #     s = Serializer(current_app.config['SECRET_KEY'])
+    #     try:
+    #         data = s.loads(token)
+    #     except:
+    #         return None
+    #     return User.query.get(data.get('reset_password'))
 
 class Contact(db.Model):
     """Table of contacts"""

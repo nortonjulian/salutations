@@ -14,3 +14,11 @@ input[type="checkbox"] {
     transform: scale(1.5);
     margin-right: 5px;
 }
+
+.nav-link-bigger {
+    font-size: 20px;
+}
+
+.input-bigger {
+    font-size: 18px;
+}

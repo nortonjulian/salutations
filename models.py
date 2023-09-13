@@ -1,60 +1,100 @@
+from flask import app, current_app
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin  # Import UserMixin
+from itsdangerous import TimedSerializer as Serializer
 
-bcrypt = Bcrypt()
+secret_key = current_app.config['SECRET_KEY']
+
+# Create an instance of SQLAlchemy
 db = SQLAlchemy()
 
+bcrypt = Bcrypt()
 
-class User(db.Model):
-    """table of users"""
+class User(db.Model, UserMixin):  # Inherit from UserMixin here
+    """Table of users"""
 
-    __tablename__ = 'users'
+    __tablename__ = 'user'
 
     id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.Text, nullable=False)
-    last_name = db.Column(db.Text, nullable=False)
-    username= db.Column(db.Text, nullable=False, unique=True)
-    password = db.Column(db.Text, nullable=False, unique=True)
-    email = db.Column(db.Text, nullable=False, unique=True)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)
+    password = db.Column(db.String(60), nullable=False)
+
+    # Add a one-to-many relationship to link users and contacts
+    contacts = db.relationship('Contact', backref='user', lazy=True)
 
     @classmethod
     def signup(cls, username, password, first_name, last_name, email):
         """Signup user"""
-
-        hashed_pwd = bcrypt.generate_password_hash(password).decode('UTF-8')
+        # Generate a new salt and hash the password
+        hashed_pwd = bcrypt.generate_password_hash(password).decode('utf-8')
+        print(f'Stored hashed Password: {hashed_pwd}')
 
         user = User(username=username, email=email, first_name=first_name, last_name=last_name, password=hashed_pwd)
 
         db.session.add(user)
         return user
 
-
     @classmethod
     def authenticate(cls, username, password):
-
         user = cls.query.filter_by(username=username).first()
 
-        if user and bcrypt.check_password_hash(user.password, password):
-            return user
+        if user:
+            app.logger.debug(f"Stored salt: {user.password}")
+            app.logger.debug(f"Submitted password: {password}")
+
+            if bcrypt.check_password_hash(user.password, password):
+                return user
 
         return None
 
-class Contacts(db.Model):
-    """table of contacts"""
+    @classmethod
+    def check_password(self, password):
+        """Check if the provided password matches the stored password hash."""
+        return bcrypt.check_password_hash(self.password, password)
 
-    __tablename__ = 'contacts'
+    def get_reset_password_token(self, expires_in=600):
+        """
+        Generate a token for resetting the user's password.
+        :param expires_in: The expiration time for the token in seconds (default is 10 minutes).
+        :return: The generated token as a string.
+        """
+        s = Serializer(secret_key, expires_in)
+        return s.dumps({'reset_password': self.id}).decode('utf-8')
+
+    @staticmethod
+    def verify_reset_password_token(token):
+        """
+        Verify a password reset token and return the associated user.
+        :param token: The token to verify.
+        :return: The user associated with the token, or None if the token is invalid.
+        """
+        s = Serializer(app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return None
+        return User.query.get(data.get('reset_password'))
+
+class Contact(db.Model):
+    """Table of contacts"""
+
+    __tablename__ = 'contact'
 
     id = db.Column(db.Integer, primary_key=True)
-    username= db.Column(db.Text, nullable=False, unique=True)
-    first_name = db.Column(db.Text, nullable=False)
-    last_name = db.Column(db.Text, nullable=False)
-    number = db.Column(db.Integer, nullable=False, unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    number = db.Column(db.String(20), nullable=False, unique=True)
 
     @classmethod
     def add(cls, user_id, first_name, last_name, number):
         """Add Contacts"""
 
-        contact = Contacts(
+        contact = cls(
             user_id=user_id,
             first_name=first_name,
             last_name=last_name,
@@ -63,8 +103,6 @@ class Contacts(db.Model):
         db.session.add(contact)
         return contact
 
-
-def connect_db(app):
-
-    db.app = app
-    db.init_app(app)
+# def connect_db(app):
+#     db.app = app
+#     db.init_app(app)

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Login</h2>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.username.label(class="form-control-label") }}
+            {{ form.username(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.password.label(class="form-control-label") }}
+            {{ form.password(class="form-control") }}
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+
+    <!-- Add the "Forgot Password" link here -->
+    <div class="contact-header">
+        <p>Forgot your password? <a href="{{ url_for('forgot_password') }}">Reset it here</a></p>
+    </div>
+{% endblock %}

@@ -1,9 +1,11 @@
 \c greetings
 
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS contacts;
+-- Drop the "user" table if it exists
+DROP TABLE IF EXISTS "users";
+DROP TABLE IF EXISTS "contacts";
 
-CREATE TABLE users (
+-- Create the "user" table
+CREATE TABLE "users" (
     id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -12,22 +14,28 @@ CREATE TABLE users (
     password text NOT NULL
 );
 
+-- Create the "contact" table
 CREATE TABLE contacts (
     id SERIAL PRIMARY KEY,
-    username text NOT NULL,
+    user_id INTEGER NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     number bigint NOT NULL UNIQUE
 );
 
-INSERT INTO users
+-- Insert sample user data into the "user" table
+INSERT INTO "user"
   (username, first_name, last_name, email, password)
 VALUES
-  ('abc', 'first', 'name', 'firstname@gmail', 'newguy23');
+  ('abc', 'first', 'name', 'firstname@gmail.com', 'hashed_password');
 
-INSERT INTO contacts
-  (username, first_name, last_name, number)
+-- Insert sample contact data into the "contact" table
+INSERT INTO contact
+  (user_id, first_name, last_name, number)
 VALUES
-  ('abc', 'contact1', 'person', 1234567890);
-
-
+  (1, 'contact1', 'person', 1234567890)
+ON CONFLICT (number) DO UPDATE
+SET
+  user_id = EXCLUDED.user_id,
+  first_name = EXCLUDED.first_name,
+  last_name = EXCLUDED.last_name;

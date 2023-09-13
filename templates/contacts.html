@@ -1,0 +1,42 @@
+<!-- templates/contacts.html -->
+{% extends "base.html" %}
+{% block content %}
+
+    <div>
+        <br><a href="/dashboard">Back to Dashboard</a>
+    </div>
+
+    <div class="contact-header">
+        <h3>Add/Edit Contact</h3>
+    </div>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.first_name.label(class="form-control-label") }}
+            {{ form.first_name(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.last_name.label(class="form-control-label") }}
+            {{ form.last_name(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.number.label(class="form-control-label") }}
+            {{ form.number(class="form-control") }}
+        </div>
+        <button type="submit" class="btn btn-primary">Save Contact</button>
+    </form>
+
+    <br><h3>Your Contacts:</h3>
+    <ul class="list-group">
+        {% for contact in contacts %}
+            <li class="list-group-item align-items-center">
+                <span>{{ contact.first_name }} {{ contact.last_name }}</span>
+                <form method="POST" action="{{ url_for('delete_contact', contact_id=contact.id) }}" style="display: inline;">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+
+{% endblock %}

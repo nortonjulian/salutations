@@ -1,0 +1,16 @@
+h1 {
+    text-align: center;
+}
+
+ul {
+    list-style-type: none;
+}
+
+.contact-header {
+    margin-top: 15px;
+}
+
+input[type="checkbox"] {
+    transform: scale(1.5);
+    margin-right: 5px;
+}

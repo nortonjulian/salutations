@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+    {% if contacts %}
+    <a href="/contacts">View Contacts</a>
+    <div class="contact-header">
+        <h3>Your Contacts:</h3>
+        <label>
+            <input type="checkbox" id="select-all-contacts"> Select All Contacts
+        </label>
+    </div>
+    {% else %}
+    <h3><a href="/contacts">Add Contacts</a></h3>
+    {% endif %}
+
+    <!-- Copy the form from dashboard.html -->
+    <form method="POST" action="/send" onsubmit="return confirmMessage();">
+        {{ form.hidden_tag() }}
+
+        <!-- Input field for manual number input if no contacts are available -->
+        {% if not contacts %}
+        <div class="form-group">
+            <div class="contact-header">
+                <label for="manual_number" class="form-control-label">Manually Enter Number:</label>
+            </div>
+            <input type="text" id="manual_number" name="manual_number" class="form-control">
+        </div>
+        {% endif %}
+
+        <ul>
+            {% for contact in contacts %}
+            <li>
+                <input type="checkbox" name="selected_contacts" value="{{ contact.id }}">
+                <label>
+                    {{ contact.first_name }} {{ contact.last_name }} ({{ contact.number }})
+                </label>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="form-group">
+            {{ form.message.label(class="form-control-label") }}
+            {{ form.message(class="form-control") }}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+
+    <!-- JavaScript for Select All Contacts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAllCheckbox = document.getElementById('select-all-contacts');
+            const contactCheckboxes = document.querySelectorAll('input[name="selected_contacts"]');
+
+            selectAllCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+
+                contactCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = isChecked;
+                });
+            });
+        });
+    </script>
+
+    <!-- Include the scripts from send_message.html -->
+    <script>
+        function confirmMessage() {
+            const confirmations = [
+                "Are you sure you want to send this message?",
+                "Is that all you want to say?",
+                "Anything else?"
+            ];
+
+            // Select a random confirmation message
+            const randomIndex = Math.floor(Math.random() * confirmations.length);
+            const confirmationMessage = confirmations[randomIndex];
+
+            return confirm(confirmationMessage);
+        }
+
+        function updateInput(checkbox) {
+            const selectedContacts = document.querySelectorAll('input[name="selected_contacts"]:checked');
+            const input = document.querySelector('input[name="message"]');
+
+            if (selectedContacts.length > 0) {
+                // Get the first and last name of the selected contact
+                const contactName = selectedContacts[0].parentNode.textContent.trim();
+                // Extract the first and last name (assuming they are separated by a space)
+                const [firstName, lastName] = contactName.split(' ');
+                // Set the input value to the selected contact's first and last name
+                input.value = `${firstName} ${lastName} - `;
+            } else {
+                // No contact is selected, clear the input value
+                input.value = '';
+            }
+        }
+    </script>
+{% endblock %}

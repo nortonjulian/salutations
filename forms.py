@@ -1,36 +1,37 @@
+# forms.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField, IntegerField, FieldList, HiddenField
-from wtforms.validators import DataRequired, Email, Length
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectMultipleField
+from wtforms.validators import DataRequired, Email, EqualTo
+
+class RegistrationForm(FlaskForm):
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(),
+        EqualTo('password', message='Passwords must match')
+    ])
+    submit = SubmitField('Sign Up')
 
 class LoginForm(FlaskForm):
-    """Login form."""
-
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
 
-class MessageForm(FlaskForm):
-    """Form for adding/editing messages."""
-
-    text = TextAreaField('text', validators=[DataRequired()])
-
-class UserAddForm(FlaskForm):
-    """Form for adding users."""
-
-    username = StringField('Username', validators=[DataRequired()])
+class ContactForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
-    email = StringField('E-mail', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[Length(min=6)])
+    number = StringField('Phone Number', validators=[DataRequired()])
+    submit = SubmitField('Save Contact')
 
-class ContactAddForm(FlaskForm):
-    """Form for adding contacts"""
-    username = StringField('Username', validators=[DataRequired()])
-    first_name = StringField('First Name', validators=[DataRequired()])
-    last_name = StringField('Last Name', validators=[DataRequired()])
-    number = IntegerField('Number', validators=[DataRequired()])
-    hidden_number = HiddenField('Hidden Number')
-
-
-class EditForm(FlaskForm):
+class DashboardForm(FlaskForm):
+    selected_contacts = SelectMultipleField('Select Contacts', coerce=int, validators=[DataRequired()])
     message = TextAreaField('Message', validators=[DataRequired()])
-    recipients = FieldList(TextAreaField('Recipient'), min_entries=1)
+    submit = SubmitField('Send Message')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Reset Password')
+

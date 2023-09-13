@@ -22,3 +22,33 @@ input[type="checkbox"] {
 .input-bigger {
     font-size: 18px;
 }
+
+/* Apply styles for mobile devices (320px - 480px) */
+@media (min-width: 320px) and (max-width: 480px) {
+    .App-header {
+      font-size: 16px; /* Adjust font size for mobile */
+    }
+
+    .recipe-card {
+      flex-basis: 100%; /* Recipe cards should take full width on mobile */
+    }
+  }
+
+  /* Apply styles for iPads and Tablets (481px - 768px) */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .App-header {
+      font-size: 18px; /* Adjust font size for tablets */
+    }
+  }
+
+  /* Apply styles for Small screens and laptops (769px - 1024px) */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .App-header {
+      font-size: 20px; /* Adjust font size for small screens and laptops */
+    }
+  }
+
+  /* Apply styles for Desktops and large screens (1025px - 1200px) */
+  @media (min-width: 1025px) and (max-width: 1200px) {
+    /* You can adjust styles as needed for desktops and large screens */
+  }

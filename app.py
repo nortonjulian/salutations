@@ -1,16 +1,30 @@
-from flask import Flask, render_template, redirect, url_for, flash, request
+from urllib.parse import quote_plus
+from flask import Flask, abort, current_app, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm
+from itsdangerous import Serializer, BadSignature, SignatureExpired
+from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm
 from flask_bcrypt import Bcrypt
+from sqlalchemy.orm import joinedload
+from flask_socketio import SocketIO, join_room, emit
 from flask_mail import Message, Mail
 from twilio.rest import Client
+from twilio.twiml.messaging_response import MessagingResponse
 import os
 import secrets
 from dotenv import load_dotenv
 import logging
 from models import db, User, Contact
 
+app = Flask(__name__, template_folder='templates')
+socketio = SocketIO(app)
+
+secret_key = secrets.token_hex(16)
+
+# Configure the app
+app.config['SECRET_KEY'] = secret_key
+app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///greetings'))
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Load environment variables from .env file
 load_dotenv()
 
@@ -22,24 +36,15 @@ TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
 # Initialize the Twilio client
 twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
-
-app = Flask(__name__)
-
-secret_key = secrets.token_hex(16)
-
 logging.basicConfig(level=logging.DEBUG)
-# Configure the app
-app.config['SECRET_KEY'] = secret_key
-app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///greetings'))
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configure Flask-Mail
-app.config['MAIL_SERVER'] = 'your_mail_server.com'  # Example: 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587  # Example: 587 for TLS
-app.config['MAIL_USERNAME'] = 'your_email@example.com'  # Your email address
-app.config['MAIL_PASSWORD'] = 'your_email_password'  # Your email password
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Gmail SMTP server
+app.config['MAIL_PORT'] = 587  # Gmail SMTP port
+app.config['MAIL_USERNAME'] = 'nortonjulian@gmail.com'  # Your Gmail email address
+app.config['MAIL_PASSWORD'] = 'dilt etdd rojh rqjj'  # Your Gmail password or an "App Password" if enabled
+app.config['MAIL_USE_TLS'] = True  # Use TLS for secure communication
+app.config['MAIL_USE_SSL'] = False  # Disable SSL
 
 # Initialize Flask-Mail
 mail = Mail(app)
@@ -238,25 +243,70 @@ def forgot_password():
         email = form.email.data
         user = User.query.filter_by(email=email).first()
         if user:
-            send_password_reset_email(user)
+            send_password_reset_email(user)  # Call the send_password_reset_email function
             flash('Check your email for the instructions to reset your password', 'info')
             return redirect(url_for('login'))
         flash('Email not found. Please check your email address.', 'danger')
 
     return render_template('forgot_password.html', form=form)
 
+def verify_reset_token(token):
+    s = Serializer(app.config['SECRET_KEY'])
+    try:
+        user_id = s.loads(token)['reset_password']
+        return user_id
+    except SignatureExpired:
+        # Token expired
+        return None
+    except BadSignature:
+        # Invalid token
+        return None
+
+# Add this route to your app.py
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    user_id = verify_reset_token(token)
+
+    if not user_id:
+        flash('Invalid or expired token. Please request a new one', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    form = ResetPasswordForm()  # Create a form for resetting the password
+
+    if form.validate_on_submit():
+        user = User.query.get(user_id)
+        if user:
+            user.password = form.password.data
+            db.session.commit()
+            flash('Your password has been reset. You can now log in with your new password.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('User not found', 'danger')
+
+    return render_template('reset_password.html', form=form)
+
 def send_password_reset_email(user):
-    token = user.get_reset_password_token()
+    # Create a token with a serializer
+    s = Serializer(current_app.config['SECRET_KEY'])
+    token = s.dumps({'reset_password': user.id})
+
+
+    # Create the reset password link using 'url_for'
+    reset_url = url_for('reset_password', token=token, _external=True)
+
     msg = Message('Reset Your Password', sender='noreply@example.com', recipients=[user.email])
     msg.body = f'''
     To reset your password, visit the following link:
-    {url_for('reset_password', token=token, _external=True)}
+    {reset_url}
 
     If you didn't request this email, simply ignore it.
     '''
     mail.send(msg)
 
+
+# app.debug = True
+
 print("Before main block")
 if __name__ == '__main__':
     print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

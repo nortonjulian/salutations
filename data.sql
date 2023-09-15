@@ -1,8 +1,9 @@
 \c greetings
 
--- Drop the "user" table if it exists
-DROP TABLE IF EXISTS "users";
-DROP TABLE IF EXISTS "contacts";
+-- Drop the "contacts" table
+DROP TABLE IF EXISTS "contacts" CASCADE;
+-- Finally, drop the "users" table
+DROP TABLE IF EXISTS "users" CASCADE;
 
 -- Create the "user" table
 CREATE TABLE "users" (
@@ -14,23 +15,26 @@ CREATE TABLE "users" (
     password text NOT NULL
 );
 
--- Create the "contact" table
-CREATE TABLE contacts (
+
+-- Create the "contacts" table
+CREATE TABLE "contacts" (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    number bigint NOT NULL UNIQUE
+    number bigint NOT NULL UNIQUE,
+    FOREIGN KEY (user_id) REFERENCES "users" (id)
 );
 
 -- Insert sample user data into the "user" table
-INSERT INTO "user"
+INSERT INTO "users"
   (username, first_name, last_name, email, password)
 VALUES
-  ('abc', 'first', 'name', 'firstname@gmail.com', 'hashed_password');
+  ('user1', 'John', 'Doe', 'john@example.com', 'hashed_password1'),
+  ('user2', 'Jane', 'Smith', 'jane@example.com', 'hashed_password2');
 
 -- Insert sample contact data into the "contact" table
-INSERT INTO contact
+INSERT INTO "contacts"
   (user_id, first_name, last_name, number)
 VALUES
   (1, 'contact1', 'person', 1234567890)

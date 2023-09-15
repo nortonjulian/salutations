@@ -30,7 +30,13 @@
     <ul class="list-group">
         {% for contact in contacts %}
             <li class="list-group-item align-items-center">
-                <span class="input-bigger">{{ contact.first_name }} {{ contact.last_name }}</span>
+                    {% if contact.conversation %}
+                        <a class="input-bigger" href="{{ url_for('view_single_conversation', conversation_id=contact.conversation_id) }}">
+                            Chat with {{ contact.first_name }} {{ contact.last_name }}
+                        </a>
+                    {% else %}
+                        {{ contact.first_name }} {{ contact.last_name }}
+                    {% endif %}
                 <form method="POST" action="{{ url_for('delete_contact', contact_id=contact.id) }}" style="display: inline;">
                     {{ form.hidden_tag() }}
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>

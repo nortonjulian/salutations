@@ -1,15 +1,10 @@
-from urllib.parse import quote_plus
-from flask import Flask, abort, current_app, render_template, redirect, url_for, flash, request
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask import Flask, current_app, render_template, redirect, url_for, flash, request
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
 from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm
 from flask_bcrypt import Bcrypt
-from sqlalchemy.orm import joinedload
-from flask_socketio import SocketIO, join_room, emit
 from flask_mail import Message, Mail
 from twilio.rest import Client
-from twilio.twiml.messaging_response import MessagingResponse
 import os
 import secrets
 from dotenv import load_dotenv
@@ -17,7 +12,6 @@ import logging
 from models import db, User, Contact
 
 app = Flask(__name__, template_folder='templates')
-socketio = SocketIO(app)
 
 secret_key = secrets.token_hex(16)
 

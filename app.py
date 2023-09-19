@@ -22,6 +22,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Load environment variables from .env file
 load_dotenv()
 
+
 # Retrieve the Twilio API credentials from environment variables
 TWILIO_ACCOUNT_SID = os.getenv('ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('AUTH_TOKEN')

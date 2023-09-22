@@ -1,5 +1,5 @@
 import unittest
-from app import app, db, index, register, login
+from app import app, db
 from models import User
 
 class TestRoutes(unittest.TestCase):

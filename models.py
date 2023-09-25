@@ -114,7 +114,6 @@ class Contact(db.Model):
         db.session.add(contact)
         return contact
 
-
 # def connect_db(app):
 #     db.app = app
 #     db.init_app(app)

@@ -146,7 +146,6 @@ def logout():
         flash(f'Goodbye, {username}!', 'info')
     return redirect(url_for('index'))
 
-
 # Send message route
 @app.route('/send', methods=['GET', 'POST'])
 @login_required

@@ -25,7 +25,6 @@ CREATE TABLE "contacts" (
     FOREIGN KEY (user_id) REFERENCES "users" (id)
 );
 
-
 -- Insert sample user data into the "user" table
 INSERT INTO "users"
   (username, first_name, last_name, email, password)

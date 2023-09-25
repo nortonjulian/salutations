@@ -283,7 +283,6 @@ def send_password_reset_email(user):
     s = Serializer(current_app.config['SECRET_KEY'])
     token = s.dumps({'reset_password': user.id})
 
-
     # Create the reset password link using 'url_for'
     reset_url = url_for('reset_password', token=token, _external=True)
 

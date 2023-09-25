@@ -38,10 +38,9 @@ INSERT INTO "contacts"
   (user_id, first_name, last_name, number)
 VALUES
   (1, 'contact1', 'person', 1234567890),
-  (2, 'contact2', 'person', 2345678901)
+  (2, 'contact2', 'person', 2345678901);
 ON CONFLICT (number) DO UPDATE
 SET
   user_id = EXCLUDED.user_id,
   first_name = EXCLUDED.first_name,
   last_name = EXCLUDED.last_name;
-

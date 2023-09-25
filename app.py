@@ -296,7 +296,6 @@ def send_password_reset_email(user):
     '''
     mail.send(msg)
 
-
 # app.debug = True
 
 print("Before main block")

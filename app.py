@@ -4,8 +4,8 @@ from itsdangerous import Serializer, BadSignature, SignatureExpired
 from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm
 from flask_bcrypt import Bcrypt
 from flask_mail import Message, Mail
-from twilio.rest import Client
 import os
+from twilio.rest import Client
 import secrets
 from dotenv import load_dotenv
 import logging
@@ -176,7 +176,6 @@ def send_message():
         return redirect(url_for('dashboard'))
 
     return render_template('dashboard.html', contacts=selected_contacts, form=form)
-
 
 # Add a route to display and edit contacts
 @app.route('/contacts', methods=['GET', 'POST'])

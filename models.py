@@ -13,7 +13,6 @@ db = SQLAlchemy()
 
 bcrypt = Bcrypt()
 
-
 class User(db.Model, UserMixin):  # Inherit from UserMixin here
     """Table of users"""
 
@@ -69,7 +68,6 @@ class User(db.Model, UserMixin):  # Inherit from UserMixin here
             salt = os.urandom(16)
             s = Serializer(current_app.config['SECRET_KEY'])
             return s.dumps({'reset_password': self.id}, salt=salt)
-
 
     @staticmethod
     def verify_reset_password_token(token):

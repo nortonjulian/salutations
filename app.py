@@ -15,6 +15,7 @@ app = Flask(__name__, template_folder='templates')
 
 secret_key = secrets.token_hex(16)
 
+
 # Configure the app
 app.config['SECRET_KEY'] = secret_key
 app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///greetings'))
@@ -26,6 +27,8 @@ load_dotenv()
 TWILIO_ACCOUNT_SID = os.getenv('ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+print("TWILIO_ACCOUNT_SID:", TWILIO_ACCOUNT_SID)
+print("TWILIO_AUTH_TOKEN:", TWILIO_AUTH_TOKEN)
 
 # Initialize the Twilio client
 twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)

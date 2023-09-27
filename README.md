@@ -15,7 +15,7 @@ Features:
 
 User registration and authentication. User-friendly web interface for sending text messages. Contact management (add, edit, delete contacts). Flash messages for notifications. Integration with Twilio for sending text messages. Installation Clone the repository:
 
-git clone https://github.com/yourusername/greetings.git Navigate to the project directory:
+git clone https://github.com/nortonjulian/salutations.git Navigate to the project directory:
 cd greetings Create a virtual environment (recommended):
 
 python -m venv venv Activate the virtual environment:

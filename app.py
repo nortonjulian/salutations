@@ -302,4 +302,4 @@ def send_password_reset_email(user):
 print("Before main block")
 if __name__ == '__main__':
     print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True, use_reloader=False, port=5000)

@@ -52,4 +52,3 @@ git push origin feature/my-feature Create a pull request (PR) from your branch t
 
 Wait for feedback and approval from the maintainers.
 
-License This project is licensed under the MIT License - see the LICENSE file for details.

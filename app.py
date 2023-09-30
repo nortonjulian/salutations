@@ -17,7 +17,7 @@ secret_key = secrets.token_hex(16)
 
 # Configure the app
 app.config['SECRET_KEY'] = secret_key
-app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///greetings'))
+app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///salutations'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Load environment variables from .env file
 load_dotenv()

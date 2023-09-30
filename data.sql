@@ -1,4 +1,4 @@
-\c greetings
+\c salutations
 
 -- Drop the "contacts" table
 DROP TABLE IF EXISTS "contacts" CASCADE;
@@ -42,4 +42,4 @@ ON CONFLICT (number) DO UPDATE
 SET
   user_id = EXCLUDED.user_id,
   first_name = EXCLUDED.first_name,
-  last_name = EXCLUDED.last_name;
+  last_name = EXCLUDED.last_name

@@ -165,6 +165,8 @@ def send_message():
             # Iterate through selected contacts and send messages
             for contact in selected_contacts:
                 # Implement Twilio message sending here for each contact
+                print(message_body)
+                print(TWILIO_PHONE_NUMBER)
                 twilio_client.messages.create(
                     body=message_body,
                     from_=TWILIO_PHONE_NUMBER,  # Your Twilio phone number

@@ -13,15 +13,15 @@
         {{ form.hidden_tag() }}
         <div class="form-group">
             {{ form.first_name.label(class="form-control-label input-bigger") }}
-            {{ form.first_name(class="form-control", value="") }}
+            {{ form.first_name(class="form-control") }}
         </div>
         <div class="form-group">
             {{ form.last_name.label(class="form-control-label input-bigger") }}
-            {{ form.last_name(class="form-control", value="") }}
+            {{ form.last_name(class="form-control") }}
         </div>
         <div class="form-group">
             {{ form.number.label(class="form-control-label input-bigger") }}
-            {{ form.number(class="form-control", value="") }}
+            {{ form.number(class="form-control") }}
         </div>
         <button type="submit" class="btn btn-primary">Save Contact</button>
     </form>

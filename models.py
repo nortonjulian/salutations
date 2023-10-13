@@ -28,6 +28,9 @@ class User(db.Model, UserMixin):  # Inherit from UserMixin here
     # Add a one-to-many relationship to link users and contacts
     contacts = db.relationship('Contact', backref='user', lazy=True)
 
+    # Define a one-to-many relationship to link uers and conversations
+    conversations = db.relationship('Conversation', backref='user', lazy='select')
+
     @classmethod
     def signup(cls, username, password, first_name, last_name, email):
         """Signup user"""
@@ -113,6 +116,30 @@ class Contact(db.Model):
         )
         db.session.add(contact)
         return contact
+
+class Conversation(db.Model):
+    """Table of conversations between users"""
+
+    __tablename__ = 'conversations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False)
+
+    # Add a relationship to link conversations and messages
+    messages = db.relationship('Message', backref='conversation', lazy=True)
+
+    def __init__(self, user_id, contact_id):
+        self.user_id = user_id
+        self.contact_id = contact_id
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String, nullable=False)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'))
+
 
 # def connect_db(app):
 #     db.app = app

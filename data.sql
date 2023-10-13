@@ -4,8 +4,13 @@
 DROP TABLE IF EXISTS "contacts" CASCADE;
 -- Finally, drop the "users" table
 DROP TABLE IF EXISTS "users" CASCADE;
+-- Drop the "conversations" table if it exists
+DROP TABLE IF EXISTS "conversations" CASCADE;
 
--- Create the "user" table
+-- Check if the "messages" table exists and drop it if it does
+DROP TABLE IF EXISTS "messages" CASCADE;
+
+-- Create the "users" table
 CREATE TABLE "users" (
     id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
@@ -25,6 +30,23 @@ CREATE TABLE "contacts" (
     FOREIGN KEY (user_id) REFERENCES "users" (id)
 );
 
+-- Create the "conversations" table (with foreign keys)
+CREATE TABLE "conversations" (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES "users" (id),
+    FOREIGN KEY (contact_id) REFERENCES "contacts" (id)
+);
+
+-- Create the "messages" table (with foreign key)
+CREATE TABLE "messages" (
+    id SERIAL PRIMARY KEY,
+    content text NOT NULL,
+    conversation_id INTEGER NOT NULL,
+    FOREIGN KEY (conversation_id) REFERENCES "conversations" (id)
+);
+
 -- Insert sample user data into the "user" table
 INSERT INTO "users"
   (username, first_name, last_name, email, password)
@@ -38,8 +60,17 @@ INSERT INTO "contacts"
 VALUES
   (1, 'contact1', 'person', 1234567890),
   (2, 'contact2', 'person', 2345678901);
-ON CONFLICT (number) DO UPDATE
-SET
-  user_id = EXCLUDED.user_id,
-  first_name = EXCLUDED.first_name,
-  last_name = EXCLUDED.last_name
+
+-- Insert sample conversation data into the "conversations" table
+-- You can add conversation data as needed
+INSERT INTO "conversations" (user_id, contact_id)
+VALUES
+  (1, 1),
+  (1, 2);
+
+-- Insert sample message data into the "messages" table
+-- You can add message data as needed
+INSERT INTO "messages" (content, conversation_id)
+VALUES
+    ('Hello, how are you?', 1),
+    ('Doing well, thanks!', 1);

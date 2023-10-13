@@ -1,3 +1,5 @@
+# Add this at the beginning of your app.py
+print("Flask application started")
 from flask import Flask, current_app, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
@@ -6,10 +8,11 @@ from flask_bcrypt import Bcrypt
 from flask_mail import Message, Mail
 import os
 from twilio.rest import Client
+from twilio.twiml.messaging_response import MessagingResponse
 import secrets
 from dotenv import load_dotenv
 import logging
-from models import db, User, Contact
+from models import db, User, Contact, Conversation
 
 app = Flask(__name__, template_folder='templates')
 
@@ -21,6 +24,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgre
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Load environment variables from .env file
 load_dotenv()
+
+# Enable SQLAlchemy debugging
+app.config['SQLALCHEMY_ECHO'] = True
 
 # Retrieve the Twilio API credentials from environment variables
 TWILIO_ACCOUNT_SID = os.getenv('ACCOUNT_SID')
@@ -153,31 +159,48 @@ def logout():
 @login_required
 def send_message():
     form = DashboardForm()
+    selected_contacts = []
 
     if request.method == 'POST':
         selected_contact_ids = request.form.getlist('selected_contacts')
         message_body = request.form['message']
 
-        # Fetch selected contacts from the database
-        selected_contacts = Contact.query.filter(Contact.id.in_(selected_contact_ids)).all()
+        # Check if manual_number is present in the form data
+        manual_number = request.form.get('manual_number')
 
-        try:
-            # Iterate through selected contacts and send messages
-            for contact in selected_contacts:
-                # Implement Twilio message sending here for each contact
-                print(message_body)
-                print(TWILIO_PHONE_NUMBER)
+        if manual_number:
+            # Send the message to the manually entered number
+            try:
                 twilio_client.messages.create(
                     body=message_body,
-                    from_=TWILIO_PHONE_NUMBER,  # Your Twilio phone number
-                    to=contact.number  # Use the contact's phone number
+                    from_=TWILIO_PHONE_NUMBER,
+                    to=manual_number
                 )
+                flash('Message sent successfully!', 'success')
+            except Exception as e:
+                flash(f'Failed to send message: {str(e)}', 'danger')
 
-            flash('Messages sent successfully!', 'success')
-        except Exception as e:
-            flash(f'Failed to send messages: {str(e)}', 'danger')
+        # Fetch selected contacts from the database
+        elif selected_contact_ids:
+            selected_contacts = Contact.query.filter(Contact.id.in_(selected_contact_ids)).all()
 
-        return redirect(url_for('dashboard'))
+            try:
+                # Iterate through selected contacts and send messages
+                for contact in selected_contacts:
+                    # Implement Twilio message sending here for each contact
+                    print(message_body)
+                    print(TWILIO_PHONE_NUMBER)
+                    twilio_client.messages.create(
+                        body=message_body,
+                        from_=TWILIO_PHONE_NUMBER,  # Your Twilio phone number
+                        to=contact.number  # Use the contact's phone number
+                    )
+
+                flash('Messages sent successfully!', 'success')
+            except Exception as e:
+                flash(f'Failed to send messages: {str(e)}', 'danger')
+
+            return redirect(url_for('dashboard'))
 
     return render_template('dashboard.html', contacts=selected_contacts, form=form)
 
@@ -300,6 +323,105 @@ def send_password_reset_email(user):
 
 # app.debug = True
 
+##########Receiving Messages##########
+
+@app.route('/inbox', methods=['GET'])
+@login_required
+def inbox():
+
+    app.config['SQLALCHEMY_ECHO'] = True
+    # Debugging: Print user's conversation to check if they are retrieved
+    print("User's Conversations:", current_user.conversations)
+
+    # Retrieve the user's conversations from the database
+    # user_conversations = current_user.conversations
+    user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
+
+    # Retrieve additional data (e.g., contact names and last message snippets)
+    conversations_data = []
+    for conversation in user_conversations:
+        # You need to implement logic to retrieve contact names and last message snippets
+        # For example, you can query the database to get this information
+        contact_name = get_contact_name(conversation.contact_id)
+        last_message_snippet = get_last_message_snippet(conversation.id)
+        messages = Message.query.filter_by(conversation_id=conversation.id).all()
+
+        conversations_data.append({
+            'conversation': conversation,
+            'contact_name': contact_name,
+            'last_message_snippet': last_message_snippet,
+            'messages': messages
+        })
+    print("Data Population:", conversations_data)
+
+    return render_template('inbox.html', conversations_data=conversations_data)
+
+def get_contact_name(contact_id):
+    # Implement logic to retrieve the contact's name based on the contact_id
+    # You may need to query your database or use your data model to fetch this information
+    # For example:
+    contact = Contact.query.get(contact_id)
+    if contact:
+        return f"{contact.first_name} {contact.last_name}"
+    else:
+        return "Unknown Contact"
+
+def get_last_message_snippet(conversation_id):
+    # Implement logic to retrieve the last message snippet for a conversation
+    # You may need to query your database or use your data model to fetch this information
+    # For example:
+    last_message = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.id.desc()).first()
+    if last_message:
+        return last_message.content[:50]  # Return the first 50 characters of the message content
+    else:
+        return "No Messages"
+
+@app.route('/conversation/<int:conversation_id>')
+@login_required
+def view_conversation(conversation_id):
+    # Retrieve the conversation and its messages
+    conversation = Conversation.query.get_or_404(conversation_id)
+    messages = conversation.messages
+    return render_template('conversation.html', conversation=conversation, messages=messages)
+
+@app.route('/incoming_sms', methods=['POST'])
+def incoming_sms():
+    # Parse the incoming SMS message details from the Twilio request
+    message_body = request.form.get('Body')
+    sender_number = request.form.get('From')
+    receiver_number = request.form.get('To')
+
+    # You need to obtain the conversation_id here, whether from the request or elsewhere
+    conversation_id = obtain_conversation_id(sender_number, receiver_number)
+
+    # Create a new message with the obtained conversation_id
+    new_message = Message(content=message_body, conversation_id=conversation_id)
+
+    response = MessagingResponse()
+    response.message(f'Thanks for your message: {message_body}')
+
+    # Store the new message in the database
+    db.session.add(new_message)
+    db.session.commit()
+
+    # After processing, you can redirect the user to their inbox or conversation
+    return redirect(url_for('inbox'))
+
+def obtain_conversation_id(sender_number, receiver_number):
+    print(f"Sender Number: {sender_number}")
+    print(f"Receiver Number: {receiver_number}")
+    # Implement your logic here to retrieve or create a conversation and obtain its ID
+    # This might involve querying your database or some other method specific to your application
+    # For example:
+    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first()
+    if conversation:
+        return conversation.id
+    else:
+        # Create a new conversation if it doesn't exist and return its ID
+        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number)
+        db.session.add(new_conversation)
+        db.session.commit()
+        return new_conversation.id
 
 print("Before main block")
 if __name__ == '__main__':

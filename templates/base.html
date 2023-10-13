@@ -17,6 +17,9 @@
                     <li class="nav-item">
                         <a class="nav-link nav-link-bigger" href="{{ url_for('logout') }}">Logout</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-bigger" href="{{ url_for('inbox') }}">Inbox</a> <!-- Add this line for the inbox -->
+                    </li>
                 {% else %}
                     <li class="nav-item">
                         <a class="nav-link nav-link-bigger" href="{{ url_for('login') }}">Login</a>

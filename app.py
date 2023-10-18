@@ -427,6 +427,12 @@ def obtain_conversation_id(sender_number, receiver_number, user_id):
 
 print("Test")
 
+@app.before_request
+def disable_csrf():
+    if request.path == '/incoming_sms':
+        # Disable CSRF protection for the /incoming_sms route
+        request.csrf_exempt = True
+
 @app.route('/incoming_sms', methods=['POST'])
 @login_required
 def incoming_sms():

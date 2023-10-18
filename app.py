@@ -428,6 +428,7 @@ def obtain_conversation_id(sender_number, receiver_number, user_id):
 print("Test")
 
 @app.route('/incoming_sms', methods=['POST'])
+@login_required
 def incoming_sms():
     print("Incoming SMS route is triggered")
     message_body = request.form.get('Body')

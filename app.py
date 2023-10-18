@@ -436,10 +436,10 @@ def incoming_sms():
     print(sender_number)
     receiver_number = request.form.get('To')
 
-    user_id = current_user.id
+    # user_id = current_user.id
 
     # You need to obtain the conversation_id here, whether from the request or elsewhere
-    conversation_id = obtain_conversation_id(sender_number, receiver_number, user_id)
+    conversation_id = obtain_conversation_id(sender_number, receiver_number, current_user.id)
 
     # Create a new message with the obtained conversation_id
     new_message = Message(content=message_body, conversation_id=conversation_id)

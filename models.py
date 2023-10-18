@@ -124,13 +124,17 @@ class Conversation(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sender_number = db.Column(db.String, nullable=False)
+    receiver_number = db.Column(db.String, nullable=False)
     contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False)
 
     # Add a relationship to link conversations and messages
     messages = db.relationship('Message', backref='conversation', lazy=True)
 
-    def __init__(self, user_id, contact_id):
+    def __init__(self, user_id, sender_number, receiver_number, contact_id):
         self.user_id = user_id
+        self.sender_number = sender_number
+        self.receiver_number = receiver_number
         self.contact_id = contact_id
 
 class Message(db.Model):

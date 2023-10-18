@@ -409,18 +409,18 @@ def view_conversation(conversation_id):
     messages = conversation.messages
     return render_template('conversation.html', conversation=conversation, messages=messages)
 
-def obtain_conversation_id(sender_number, receiver_number):
+def obtain_conversation_id(sender_number, receiver_number, user_id):
     print(f"Sender Number: {sender_number}")
     print(f"Receiver Number: {receiver_number}")
     # Implement your logic here to retrieve or create a conversation and obtain its ID
     # This might involve querying your database or some other method specific to your application
     # For example:
-    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first()
+    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id).first()
     if conversation:
         return conversation.id
     else:
         # Create a new conversation if it doesn't exist and return its ID
-        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number)
+        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id)
         db.session.add(new_conversation)
         db.session.commit()
         return new_conversation.id
@@ -432,6 +432,7 @@ def incoming_sms():
     print("Incoming SMS route is triggered")
     message_body = request.form.get('Body')
     sender_number = request.form.get('From')
+    print(sender_number)
     receiver_number = request.form.get('To')
 
     # You need to obtain the conversation_id here, whether from the request or elsewhere

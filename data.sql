@@ -33,6 +33,8 @@ CREATE TABLE "contacts" (
 -- Create the "conversations" table (with foreign keys)
 CREATE TABLE "conversations" (
     id SERIAL PRIMARY KEY,
+    sender_number VARCHAR(255) NOT NULL,
+    receiver_number VARCHAR(255) NOT NULL,
     user_id INTEGER NOT NULL,
     contact_id INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES "users" (id),
@@ -63,10 +65,10 @@ VALUES
 
 -- Insert sample conversation data into the "conversations" table
 -- You can add conversation data as needed
-INSERT INTO "conversations" (user_id, contact_id)
+INSERT INTO "conversations" (user_id, sender_number, receiver_number, contact_id)
 VALUES
-  (1, 1),
-  (1, 2);
+  (1, 'sender_number1', 'receiver_number1', 1),
+  (1, 'sender_number2', 'receiver_number2', 2);
 
 -- Insert sample message data into the "messages" table
 -- You can add message data as needed

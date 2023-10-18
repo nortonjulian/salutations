@@ -325,6 +325,31 @@ def send_password_reset_email(user):
 
 ##########Receiving Messages##########
 
+# @app.route('/incoming_sms', methods=['POST'])
+# def incoming_sms():
+#     print("Incoming SMS route is triggered")
+#     # Parse the incoming SMS message details from the Twilio request
+#     message_body = request.form.get('Body')
+#     sender_number = request.form.get('From')
+#     receiver_number = request.form.get('To')
+
+#     # You need to obtain the conversation_id here, whether from the request or elsewhere
+#     conversation_id = obtain_conversation_id(sender_number, receiver_number)
+
+#     # Create a new message with the obtained conversation_id
+#     new_message = Message(content=message_body, conversation_id=conversation_id)
+
+#     response = MessagingResponse()
+#     response.message(f'Thanks for your message: {message_body}')
+
+#     # Store the new message in the database
+#     db.session.add(new_message)
+#     db.session.commit()
+
+#     # After processing, you can redirect the user to their inbox or conversation
+#     return redirect(url_for('inbox'))
+
+
 @app.route('/inbox', methods=['GET'])
 @login_required
 def inbox():
@@ -334,8 +359,8 @@ def inbox():
     print("User's Conversations:", current_user.conversations)
 
     # Retrieve the user's conversations from the database
-    # user_conversations = current_user.conversations
-    user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
+    user_conversations = current_user.conversations
+    # user_conversations = Conversation.query.filter_by(user_id=current_user.id).all
 
     # Retrieve additional data (e.g., contact names and last message snippets)
     conversations_data = []
@@ -384,29 +409,6 @@ def view_conversation(conversation_id):
     messages = conversation.messages
     return render_template('conversation.html', conversation=conversation, messages=messages)
 
-@app.route('/incoming_sms', methods=['POST'])
-def incoming_sms():
-    # Parse the incoming SMS message details from the Twilio request
-    message_body = request.form.get('Body')
-    sender_number = request.form.get('From')
-    receiver_number = request.form.get('To')
-
-    # You need to obtain the conversation_id here, whether from the request or elsewhere
-    conversation_id = obtain_conversation_id(sender_number, receiver_number)
-
-    # Create a new message with the obtained conversation_id
-    new_message = Message(content=message_body, conversation_id=conversation_id)
-
-    response = MessagingResponse()
-    response.message(f'Thanks for your message: {message_body}')
-
-    # Store the new message in the database
-    db.session.add(new_message)
-    db.session.commit()
-
-    # After processing, you can redirect the user to their inbox or conversation
-    return redirect(url_for('inbox'))
-
 def obtain_conversation_id(sender_number, receiver_number):
     print(f"Sender Number: {sender_number}")
     print(f"Receiver Number: {receiver_number}")
@@ -423,7 +425,31 @@ def obtain_conversation_id(sender_number, receiver_number):
         db.session.commit()
         return new_conversation.id
 
+print("Test")
+
+@app.route('/incoming_sms', methods=['POST'])
+def incoming_sms():
+    print("Incoming SMS route is triggered")
+    message_body = request.form.get('Body')
+    sender_number = request.form.get('From')
+    receiver_number = request.form.get('To')
+
+    # You need to obtain the conversation_id here, whether from the request or elsewhere
+    conversation_id = obtain_conversation_id(sender_number, receiver_number)
+
+    # Create a new message with the obtained conversation_id
+    new_message = Message(content=message_body, conversation_id=conversation_id)
+
+    # Store the new message in the database
+    db.session.add(new_message)
+    db.session.commit()
+
+    # After processing, you can redirect the user to their inbox or conversation
+    return redirect(url_for('inbox'))
+
+
 print("Before main block")
+app.debug = True
 if __name__ == '__main__':
     print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     app.run(debug=True, use_reloader=False, port=5000)

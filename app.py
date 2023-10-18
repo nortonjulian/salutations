@@ -438,7 +438,7 @@ def disable_csrf():
 def incoming_sms():
     print("Incoming SMS route is triggered")
     message_body = request.form.get('Body')
-    print(sender_number)
+    print(message_body)
     sender_number = request.form.get('From')
     print(sender_number)
     receiver_number = request.form.get('To')

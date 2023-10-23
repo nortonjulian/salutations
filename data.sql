@@ -35,7 +35,7 @@ CREATE TABLE "conversations" (
     id SERIAL PRIMARY KEY,
     sender_number VARCHAR(255) NOT NULL,
     receiver_number VARCHAR(255) NOT NULL,
-    user_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL, 
     contact_id INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES "users" (id),
     FOREIGN KEY (contact_id) REFERENCES "contacts" (id)

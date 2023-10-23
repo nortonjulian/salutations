@@ -1,11 +1,13 @@
 # Add this at the beginning of your app.py
 print("Flask application started")
-from flask import Flask, current_app, render_template, redirect, url_for, flash, request
+from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
 from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm
 from flask_bcrypt import Bcrypt
 from flask_mail import Message, Mail
+from flask_wtf.csrf import CSRFProtect
+from functools import wraps
 import os
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
@@ -15,6 +17,13 @@ import logging
 from models import db, User, Contact, Conversation
 
 app = Flask(__name__, template_folder='templates')
+csrf = CSRFProtect(app)
+csrf.init_app(app)
+
+app.config.update(WTF_CSRF_ENABLED=False,
+                  WTF_CSRF_METHODS=['POST'])
+
+app.config['WTF_CSRF_EXEMPT_ROUTES'] = ['/incoming_sms']
 
 secret_key = secrets.token_hex(16)
 
@@ -410,6 +419,7 @@ def view_conversation(conversation_id):
     return render_template('conversation.html', conversation=conversation, messages=messages)
 
 def obtain_conversation_id(sender_number, receiver_number, user_id):
+    print("obtain_conversation_id")
     print(f"Sender Number: {sender_number}")
     print(f"Receiver Number: {receiver_number}")
     # Implement your logic here to retrieve or create a conversation and obtain its ID
@@ -427,6 +437,25 @@ def obtain_conversation_id(sender_number, receiver_number, user_id):
 
 print("Test")
 
+
+# @app.before_request
+# def csrf_exempt():
+#     # Explicitly exempt the /incoming_sms route from CSRF checks
+#     if request.path == '/incoming_sms':
+#         return
+
+#     csrf.exempt()
+
+def csrf_exempt(view):
+    @wraps(view)
+    def decorated(*args, **kwargs):
+        if request.path == '/incoming_sms':
+            return view(*args, **kwargs)
+        if not request.csrf_valid:
+            abort(400)  # Return an error response if CSRF token is missing or invalid
+        return view(*args, **kwargs)
+    return decorated
+
 @app.before_request
 def disable_csrf():
     if request.path == '/incoming_sms':
@@ -435,18 +464,24 @@ def disable_csrf():
 
 @app.route('/incoming_sms', methods=['POST'])
 @login_required
+@csrf_exempt
 def incoming_sms():
-    print("Incoming SMS route is triggered")
+    # message_body = request.form.get('Body')
+    # print(message_body)
+    print(request)
+    if request.method == 'POST':
+        print("Incoming SMS route is triggered")
     message_body = request.form.get('Body')
     print(message_body)
     sender_number = request.form.get('From')
     print(sender_number)
     receiver_number = request.form.get('To')
-
+    print(receiver_number)
     # user_id = current_user.id
+    user_id = current_user.id
 
     # You need to obtain the conversation_id here, whether from the request or elsewhere
-    conversation_id = obtain_conversation_id(sender_number, receiver_number, current_user.id)
+    conversation_id = obtain_conversation_id(sender_number, receiver_number, user_id)
 
     # Create a new message with the obtained conversation_id
     new_message = Message(content=message_body, conversation_id=conversation_id)
@@ -457,7 +492,6 @@ def incoming_sms():
 
     # After processing, you can redirect the user to their inbox or conversation
     return redirect(url_for('inbox'))
-
 
 print("Before main block")
 app.debug = True

@@ -3,33 +3,47 @@ print("Flask application started")
 from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
-from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm
+from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm, ResponseForm
 from flask_bcrypt import Bcrypt
 from flask_mail import Message, Mail
 from flask_wtf.csrf import CSRFProtect
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from functools import wraps
 import os
 from twilio.rest import Client
-from twilio.twiml.messaging_response import MessagingResponse
+from database import db
 import secrets
 from dotenv import load_dotenv
 import logging
-from models import db, User, Contact, Conversation
+from models import User, Contact, Conversation, Message, TwilioNumberAssociation
 
 app = Flask(__name__, template_folder='templates')
+# db = SQLAlchemy()
+
 csrf = CSRFProtect(app)
 csrf.init_app(app)
 
 app.config.update(WTF_CSRF_ENABLED=False,
                   WTF_CSRF_METHODS=['POST'])
 
+
+
 app.config['WTF_CSRF_EXEMPT_ROUTES'] = ['/incoming_sms']
 
 secret_key = secrets.token_hex(16)
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+login_manager.login_view = 'view'
+
 # Configure the app
 app.config['SECRET_KEY'] = secret_key
 app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///salutations'))
+
+db.init_app(app)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Load environment variables from .env file
 load_dotenv()
@@ -65,12 +79,12 @@ mail = Mail(app)
 
 bcrypt = Bcrypt(app)
 
-def connect_db(app):
-    db.app = app
-    db.init_app(app)
+# def connect_db(app):
+#     db.app = app
+#     db.init_app(app)
 
 # Call connect_db to associate the db instance with your app
-connect_db(app)
+# connect_db(app)
 
 # Initialize the login manager
 login_manager = LoginManager(app)
@@ -120,6 +134,10 @@ def register():
 
     return render_template('register.html', form=form)
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -163,7 +181,6 @@ def logout():
         flash(f'Goodbye, {username}!', 'info')
     return redirect(url_for('index'))
 
-# Send message route
 @app.route('/send', methods=['GET', 'POST'])
 @login_required
 def send_message():
@@ -179,6 +196,31 @@ def send_message():
 
         if manual_number:
             # Send the message to the manually entered number
+
+            existing_conversation = Conversation.query.filter(
+                text("conversations.sender_number = :sender_number AND conversations.receiver_number = :receiver_number")
+            ).params(
+                sender_number=TWILIO_PHONE_NUMBER,
+                receiver_number=int(manual_number),
+            ).first()
+
+            if existing_conversation:
+                conversation_id = existing_conversation.id
+            else:
+
+                new_conversation = Conversation(
+                    sender_number=TWILIO_PHONE_NUMBER,
+                    receiver_number=manual_number,
+                    user_id=current_user.id,
+                    contact_id=None,
+                )
+                db.session.add(new_conversation)
+                db.session.commit()
+                conversation_id = new_conversation.id
+
+            new_message = Message(content=message_body, conversation_id=conversation_id)
+            db.session.add(new_message)
+
             try:
                 twilio_client.messages.create(
                     body=message_body,
@@ -199,19 +241,50 @@ def send_message():
                     # Implement Twilio message sending here for each contact
                     print(message_body)
                     print(TWILIO_PHONE_NUMBER)
-                    twilio_client.messages.create(
-                        body=message_body,
-                        from_=TWILIO_PHONE_NUMBER,  # Your Twilio phone number
-                        to=contact.number  # Use the contact's phone number
-                    )
 
+                    existing_conversation = Conversation.query.filter(
+                        text("conversations.sender_number = :sender_number AND conversations.receiver_number = :receiver_number")
+                    ).params(
+                        sender_number=TWILIO_PHONE_NUMBER,
+                        receiver_number=str(contact.number),
+                    ).first()
+
+
+                    if existing_conversation:
+                        conversation_id = existing_conversation.id
+
+                    else:
+                        new_conversation = Conversation(
+                            sender_number=TWILIO_PHONE_NUMBER,
+                            receiver_number=contact.number,
+                            user_id=current_user.id,
+                            contact_id=contact.id
+                        )
+                        db.session.add(new_conversation)
+                        db.session.commit()
+                        conversation_id = new_conversation.id
+
+                    new_message = Message(content=message_body, conversation_id=conversation_id)
+                    db.session.add(new_message)
+
+                    try:
+                        twilio_client.messages.create(
+                            body=message_body,
+                            from_=TWILIO_PHONE_NUMBER,  # Your Twilio phone number
+                            to=contact.number  # Use the contact's phone number
+                        )
+                    except Exception as e:
+                        flash(f'Failed to send messages to contacts: {str(e)}', 'danger')
+
+                db.session.commit()
                 flash('Messages sent successfully!', 'success')
             except Exception as e:
-                flash(f'Failed to send messages: {str(e)}', 'danger')
+                flash(f'Failed to send messages to contacts: {str(e)}', 'danger')
 
             return redirect(url_for('dashboard'))
 
     return render_template('dashboard.html', contacts=selected_contacts, form=form)
+
 
 # Add a route to display and edit contacts
 @app.route('/contacts', methods=['GET', 'POST'])
@@ -334,42 +407,24 @@ def send_password_reset_email(user):
 
 ##########Receiving Messages##########
 
-# @app.route('/incoming_sms', methods=['POST'])
-# def incoming_sms():
-#     print("Incoming SMS route is triggered")
-#     # Parse the incoming SMS message details from the Twilio request
-#     message_body = request.form.get('Body')
-#     sender_number = request.form.get('From')
-#     receiver_number = request.form.get('To')
-
-#     # You need to obtain the conversation_id here, whether from the request or elsewhere
-#     conversation_id = obtain_conversation_id(sender_number, receiver_number)
-
-#     # Create a new message with the obtained conversation_id
-#     new_message = Message(content=message_body, conversation_id=conversation_id)
-
-#     response = MessagingResponse()
-#     response.message(f'Thanks for your message: {message_body}')
-
-#     # Store the new message in the database
-#     db.session.add(new_message)
-#     db.session.commit()
-
-#     # After processing, you can redirect the user to their inbox or conversation
-#     return redirect(url_for('inbox'))
-
-
-@app.route('/inbox', methods=['GET'])
+@app.route('/inbox', methods=['GET', 'POST'])
 @login_required
 def inbox():
 
     app.config['SQLALCHEMY_ECHO'] = True
     # Debugging: Print user's conversation to check if they are retrieved
+
+    print("User ID:", current_user.id)
     print("User's Conversations:", current_user.conversations)
 
+    # After the query for user_conversations
+ # Print the query results
     # Retrieve the user's conversations from the database
-    user_conversations = current_user.conversations
-    # user_conversations = Conversation.query.filter_by(user_id=current_user.id).all
+
+    user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
+
+    print("SQL Query:", str(user_conversations))  # Print the SQL query
+    print("Query Results:", user_conversations)
 
     # Retrieve additional data (e.g., contact names and last message snippets)
     conversations_data = []
@@ -396,7 +451,9 @@ def get_contact_name(contact_id):
     # For example:
     contact = Contact.query.get(contact_id)
     if contact:
-        return f"{contact.first_name} {contact.last_name}"
+        contact_name = f"{contact.first_name} {contact.last_name}"
+        print("Contact Name:", contact_name)
+        return contact_name
     else:
         return "Unknown Contact"
 
@@ -416,35 +473,28 @@ def view_conversation(conversation_id):
     # Retrieve the conversation and its messages
     conversation = Conversation.query.get_or_404(conversation_id)
     messages = conversation.messages
-    return render_template('conversation.html', conversation=conversation, messages=messages)
+    contact_name = get_contact_name(conversation.contact_id)
+    return render_template('conversation.html', conversation=conversation, messages=messages, contact_name=contact_name)
 
-def obtain_conversation_id(sender_number, receiver_number, user_id):
+def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
     print("obtain_conversation_id")
     print(f"Sender Number: {sender_number}")
     print(f"Receiver Number: {receiver_number}")
     # Implement your logic here to retrieve or create a conversation and obtain its ID
     # This might involve querying your database or some other method specific to your application
     # For example:
-    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id).first()
+    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first()
     if conversation:
         return conversation.id
     else:
         # Create a new conversation if it doesn't exist and return its ID
-        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id)
+        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id, contact_id=contact_id)
         db.session.add(new_conversation)
         db.session.commit()
         return new_conversation.id
 
 print("Test")
 
-
-# @app.before_request
-# def csrf_exempt():
-#     # Explicitly exempt the /incoming_sms route from CSRF checks
-#     if request.path == '/incoming_sms':
-#         return
-
-#     csrf.exempt()
 
 def csrf_exempt(view):
     @wraps(view)
@@ -462,8 +512,19 @@ def disable_csrf():
         # Disable CSRF protection for the /incoming_sms route
         request.csrf_exempt = True
 
+def get_user_id(sender_number):
+    association = TwilioNumberAssociation.query.filter_by(twilio_number=sender_number).first()
+    if association:
+        return association.user_id
+    return None
+
+def get_contact_id(sender_number):
+    contact = Contact.query.filter_by(number=sender_number).first()
+    if contact:
+        return contact.id
+    return None
+
 @app.route('/incoming_sms', methods=['POST'])
-@login_required
 @csrf_exempt
 def incoming_sms():
     # message_body = request.form.get('Body')
@@ -478,10 +539,13 @@ def incoming_sms():
     receiver_number = request.form.get('To')
     print(receiver_number)
     # user_id = current_user.id
-    user_id = current_user.id
+
+    user_id = get_user_id(sender_number)
+
+    contact_id = get_contact_id(sender_number)
 
     # You need to obtain the conversation_id here, whether from the request or elsewhere
-    conversation_id = obtain_conversation_id(sender_number, receiver_number, user_id)
+    conversation_id = obtain_conversation_id(sender_number, receiver_number, user_id, contact_id)
 
     # Create a new message with the obtained conversation_id
     new_message = Message(content=message_body, conversation_id=conversation_id)
@@ -492,6 +556,48 @@ def incoming_sms():
 
     # After processing, you can redirect the user to their inbox or conversation
     return redirect(url_for('inbox'))
+
+@app.route('/conversation/<int:conversation_id>/respond', methods=['GET', 'POST'])
+@login_required
+def respond_to_conversation(conversation_id):
+    form = ResponseForm()
+
+    if form.validate_on_submit():
+        response = form.response.data
+
+        # Retrieve the conversation and sender/receiver numbers
+        conversation = Conversation.query.get_or_404(conversation_id)
+        sender_number = conversation.sender_number
+        receiver_number = conversation.receiver_number
+
+        # Obtain the user_id and contact_id for the sender number
+        user_id = get_user_id(sender_number)
+        contact_id = get_contact_id(sender_number)
+
+        # Create a new message with the obtained conversation_id
+        new_message = Message(content=response, conversation_id=conversation_id)
+
+        # Store the new message in the database
+        db.session.add(new_message)
+        db.session.commit()
+
+        # Send the response to the receiver number using Twilio
+        try:
+            twilio_client.messages.create(
+                body=response,
+                from_=sender_number,
+                to=receiver_number
+            )
+        except Exception as e:
+            flash(f'Failed to send the response: {str(e)}', 'danger')
+
+        flash('Response sent successfully!', 'success')
+
+        # Redirect the user back to the conversation view
+        return redirect(url_for('view_conversation', conversation_id=conversation_id))
+
+    return render_template('response-form.html', form=form, conversation_id=conversation_id)
+
 
 print("Before main block")
 app.debug = True

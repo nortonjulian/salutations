@@ -1,5 +1,6 @@
 from datetime import datetime
 from flask import app, current_app
+from database import db
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin  # Import UserMixin
@@ -9,7 +10,7 @@ import os
 # secret_key = current_app.config['SECRET_KEY']
 
 # Create an instance of SQLAlchemy
-db = SQLAlchemy()
+# db = SQLAlchemy()
 
 bcrypt = Bcrypt()
 
@@ -30,6 +31,8 @@ class User(db.Model, UserMixin):  # Inherit from UserMixin here
 
     # Define a one-to-many relationship to link uers and conversations
     conversations = db.relationship('Conversation', backref='user', lazy='select')
+
+    twilio_number_association = db.relationship('TwilioNumberAssociation', back_populates='user', lazy=True)
 
     @classmethod
     def signup(cls, username, password, first_name, last_name, email):
@@ -85,7 +88,7 @@ class User(db.Model, UserMixin):  # Inherit from UserMixin here
                 data = s.loads(token)
             except:
                 return None
-            return User.query.get(data.get('reset_password'))
+            return User.query.get(data['reset_password'])
 
 class Contact(db.Model):
     """Table of contacts"""
@@ -131,7 +134,7 @@ class Conversation(db.Model):
     # Add a relationship to link conversations and messages
     messages = db.relationship('Message', backref='conversation', lazy=True)
 
-    def __init__(self, user_id, sender_number, receiver_number, contact_id):
+    def __init__(self, sender_number, receiver_number, user_id=None, contact_id=None):
         self.user_id = user_id
         self.sender_number = sender_number
         self.receiver_number = receiver_number
@@ -143,6 +146,26 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String, nullable=False)
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'))
+
+from flask_sqlalchemy import SQLAlchemy
+
+# db = SQLAlchemy()  # Assuming you're using SQLAlchemy
+
+from flask_sqlalchemy import SQLAlchemy
+
+class TwilioNumberAssociation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    twilio_number = db.Column(db.String(15), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Specify the relationship explicitly using 'primaryjoin'
+    user = db.relationship('User', back_populates='twilio_number_association', primaryjoin="TwilioNumberAssociation.user_id == User.id")
+
+    def __init__(self, twilio_number, user_id):
+        self.twilio_number = twilio_number
+        self.user_id = user_id
+
+
 
 
 # def connect_db(app):

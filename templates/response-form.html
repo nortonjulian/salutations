@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Respond to Conversation</h2>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.response.label(class="form-control-label") }}
+            {{ form.response(class="form-control", placeholder="Enter your response", rows="4") }}
+        </div>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+    <a href="{{ url_for('view_conversation', conversation_id=conversation_id) }}" class="btn btn-secondary">Back to Conversation</a>
+{% endblock %}

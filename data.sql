@@ -35,8 +35,8 @@ CREATE TABLE "conversations" (
     id SERIAL PRIMARY KEY,
     sender_number VARCHAR(255) NOT NULL,
     receiver_number VARCHAR(255) NOT NULL,
-    user_id INTEGER NOT NULL, 
-    contact_id INTEGER NOT NULL,
+    user_id INTEGER NULL,
+    contact_id INTEGER NULL,
     FOREIGN KEY (user_id) REFERENCES "users" (id),
     FOREIGN KEY (contact_id) REFERENCES "contacts" (id)
 );
@@ -47,6 +47,14 @@ CREATE TABLE "messages" (
     content text NOT NULL,
     conversation_id INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES "conversations" (id)
+);
+
+-- Create the "twilio_number_association" table
+CREATE TABLE "twilio_number_association" (
+    id SERIAL PRIMARY KEY,
+    twilio_number VARCHAR(255) NOT NULL,
+    user_id INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES "users" (id)
 );
 
 -- Insert sample user data into the "user" table
@@ -68,11 +76,18 @@ VALUES
 INSERT INTO "conversations" (user_id, sender_number, receiver_number, contact_id)
 VALUES
   (1, 'sender_number1', 'receiver_number1', 1),
-  (1, 'sender_number2', 'receiver_number2', 2);
+  (2, 'sender_number2', 'receiver_number2', 2);
 
 -- Insert sample message data into the "messages" table
 -- You can add message data as needed
 INSERT INTO "messages" (content, conversation_id)
 VALUES
     ('Hello, how are you?', 1),
-    ('Doing well, thanks!', 1);
+    ('Doing well, thanks!', 2);
+
+-- Insert sample twilio number associations
+-- You can add associations as needed
+INSERT INTO "twilio_number_association" (twilio_number, user_id)
+VALUES
+  ('+1234567890', 1),
+  ('+9876543210', 2);

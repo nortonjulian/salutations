@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Conversation with {{ contact_name }}</h2>
+
+    <div class="conversation-messages">
+        {% for message in messages %}
+            <div class="message">
+                <p>{{ message.content }}</p>
+                <p class="message-timestamp">{{ message.timestamp }}</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <form method="GET" action="{{ url_for('respond_to_conversation', conversation_id=conversation.id) }}">
+        <button type="submit"class="btn btn-secondary">Respond</button>
+    </form>
+    <br>
+    <a href="{{ url_for('inbox') }}" >Back to Inbox</a>
+{% endblock %}

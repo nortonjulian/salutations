@@ -570,13 +570,28 @@ def view_conversation(conversation_id):
     contact_name = get_contact_name(conversation.contact_id)
     return render_template('conversation.html', conversation=conversation, messages=messages, contact_name=contact_name)
 
+# def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
+#     conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()
+#     if conversation:
+#         return conversation.id
+#     else:
+#         # Create a new conversation if it doesn't exist and return its ID
+#         new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id, contact_id=contact_id)
+#         db.session.add(new_conversation)
+#         db.session.commit()
+#         return new_conversation.id
+
 def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
     conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()
     if conversation:
+        # Check if the conversation exists
+        if not conversation.messages_read:
+            conversation.messages_read = True  # Mark the conversation as read
+            db.session.commit()
         return conversation.id
     else:
         # Create a new conversation if it doesn't exist and return its ID
-        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id, contact_id=contact_id)
+        new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id, contact_id=contact_id, messages_read=True)  # Mark the new conversation as read
         db.session.add(new_conversation)
         db.session.commit()
         return new_conversation.id

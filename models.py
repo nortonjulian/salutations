@@ -130,11 +130,11 @@ class Conversation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     sender_number = db.Column(db.String, nullable=False)
     receiver_number = db.Column(db.String, nullable=False)
+    messages_read = db.Column(db.Boolean, default=False)
     contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False)
 
     # Update the relationship to link conversations and messages
     messages = db.relationship('Message', lazy=True)
-    messages_read = db.Column(db.Boolean, default=False)
 
     def __init__(self, sender_number, receiver_number, user_id=None, contact_id=None):
         self.user_id = user_id

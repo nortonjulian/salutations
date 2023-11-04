@@ -732,5 +732,6 @@ def respond_to_conversation(conversation_id):
 print("Before main block")
 app.debug = True
 if __name__ == '__main__':
+    db.create.all()
     print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     app.run(debug=True, use_reloader=False, port=5000)

@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import DateTime
+import pytz
 from flask import app, current_app
 from database import db
 from flask_bcrypt import Bcrypt
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin  # Import UserMixin
 from itsdangerous import TimedSerializer as Serializer
 import os
@@ -131,8 +132,9 @@ class Conversation(db.Model):
     receiver_number = db.Column(db.String, nullable=False)
     contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False)
 
-    # Add a relationship to link conversations and messages
-    messages = db.relationship('Message', backref='conversation', lazy=True)
+    # Update the relationship to link conversations and messages
+    messages = db.relationship('Message', lazy=True)
+    messages_read = db.Column(db.Boolean, default=False)
 
     def __init__(self, sender_number, receiver_number, user_id=None, contact_id=None):
         self.user_id = user_id
@@ -145,13 +147,36 @@ class Message(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String, nullable=False)
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'))
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    receiver_number = db.Column(db.String, nullable=False)
+    timestamp = db.Column(DateTime, default=datetime.utcnow)
+    messages_read = db.Column(db.Boolean, default=False)
 
-from flask_sqlalchemy import SQLAlchemy
+    # Define the relationship to the User model for the sender
+    sender = db.relationship('User', foreign_keys=[sender_id])
 
-# db = SQLAlchemy()  # Assuming you're using SQLAlchemy
+    # Remove the back_populates and backref from the conversation relationship
+    conversation = db.relationship('Conversation', back_populates='messages', overlaps='messages')
 
-from flask_sqlalchemy import SQLAlchemy
+    # def formatted_timestamp(self):
+
+    #     desired_timezone = pytz.timezone('America/Los_Angeles')
+    #     localized_time = self.timestamp.astimezone(desired_timezone)
+
+    #     formatted_time = localized_time.strftime("%A, %I:%M %p, %B %d, %Y")
+    #     return formatted_time.lstrip("0").replace(" 0", " ")
+
+    def formatted_timestamp(self):
+        # Subtract 6 hours from the timestamp
+        six_hours_ago = self.timestamp - timedelta(hours=5)
+
+        desired_timezone = pytz.timezone('America/Los_Angeles')
+        localized_time = six_hours_ago.astimezone(desired_timezone)
+
+        formatted_time = localized_time.strftime("%A, %I:%M %p, %B %d, %Y")
+        return formatted_time.lstrip("0").replace(" 0", " ")
+
 
 class TwilioNumberAssociation(db.Model):
     id = db.Column(db.Integer, primary_key=True)

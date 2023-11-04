@@ -94,4 +94,59 @@
             }
         }
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Function to update the message count
+            function updateMessageCount() {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/get_unread_message_count', true);
+
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        var data = JSON.parse(xhr.responseText);
+                        console.log("Data:", data)
+                        var messageCount = data.count;
+                        const messageCountElement = document.getElementById('message-count');
+
+                        // Set the badge count based on the message count
+                        messageCountElement.textContent = messageCount;
+
+                        // Hide the badge if the message count is zero
+                        if (messageCount === 0) {
+                            console.log("messageCount:", messageCount);
+                            messageCountElement.style.display = 'none';
+                        } else {
+                            messageCountElement.style.display = 'inline';
+                        }
+                    } else {
+                        console.error('Request failed with status: ' + xhr.status);
+                    }
+                };
+
+                xhr.send();
+            }
+
+            function hideMessageCount() {
+                const messageCountElement = document.getElementById('message-count');
+                messageCountElement.style.display = 'none';
+            }
+
+            // Polling interval (in milliseconds)
+            var pollingInterval = 10000;
+
+            // Periodically update the message count
+            setInterval(updateMessageCount, pollingInterval);
+
+            // Initial update
+            updateMessageCount();
+
+            const inboxLink = document.querySelector('a[href="/inbox"]');
+            if (inboxLink) {
+                inboxLink.addEventListener('click',function () {
+                    hideMessageCount()
+                    setTimeout(updateMessageCount, 1000)
+                });
+            }
+        });
+    </script>
 {% endblock %}

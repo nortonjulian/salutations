@@ -1,16 +1,18 @@
 # Add this at the beginning of your app.py
 print("Flask application started")
-from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort
+from datetime import datetime
+from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
 from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm, ResponseForm
 from flask_bcrypt import Bcrypt
 from flask_mail import Message, Mail
 from flask_wtf.csrf import CSRFProtect
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from functools import wraps
+from sqlalchemy import and_
 import os
+import pytz
 from twilio.rest import Client
 from database import db
 import secrets
@@ -41,6 +43,7 @@ login_manager.login_view = 'view'
 # Configure the app
 app.config['SECRET_KEY'] = secret_key
 app.config['SQLALCHEMY_DATABASE_URI'] = (os.environ.get('DATABASE_URL', 'postgresql:///salutations'))
+app.config['SQLALCHEMY_ECHO'] = True
 
 db.init_app(app)
 
@@ -206,19 +209,33 @@ def send_message():
 
             if existing_conversation:
                 conversation_id = existing_conversation.id
+                print("Using existing conversation")
             else:
-
+                print("Creating new conversation")
                 new_conversation = Conversation(
                     sender_number=TWILIO_PHONE_NUMBER,
                     receiver_number=manual_number,
                     user_id=current_user.id,
                     contact_id=None,
                 )
+
                 db.session.add(new_conversation)
                 db.session.commit()
                 conversation_id = new_conversation.id
+            print("$$$$$$$$$$$$$$$$$$$$$ - Outgoing")
+            print(conversation_id)
 
-            new_message = Message(content=message_body, conversation_id=conversation_id)
+            sender_user_id = current_user.id
+            print("Sender_User_ID:", sender_user_id)
+            new_message = Message(
+                 content=message_body,
+                 conversation_id=conversation_id,
+                 sender_id=sender_user_id,
+                 receiver_number=manual_number,
+                 timestamp=datetime.now(),
+                 read=False
+            )
+
             db.session.add(new_message)
 
             try:
@@ -239,24 +256,24 @@ def send_message():
                 # Iterate through selected contacts and send messages
                 for contact in selected_contacts:
                     # Implement Twilio message sending here for each contact
-                    print(message_body)
-                    print(TWILIO_PHONE_NUMBER)
 
                     existing_conversation = Conversation.query.filter(
                         text("conversations.sender_number = :sender_number AND conversations.receiver_number = :receiver_number")
                     ).params(
                         sender_number=TWILIO_PHONE_NUMBER,
-                        receiver_number=str(contact.number),
+                        receiver_number="+1" + str(contact.number),
                     ).first()
-
+                    # print(TWILIO_PHONE_NUMBER)
+                    print(str(contact.number))
 
                     if existing_conversation:
                         conversation_id = existing_conversation.id
-
+                        print("Using existing conversation")
                     else:
+                        print("Creating new conversation")
                         new_conversation = Conversation(
                             sender_number=TWILIO_PHONE_NUMBER,
-                            receiver_number=contact.number,
+                            receiver_number="+1"+str(contact.number),
                             user_id=current_user.id,
                             contact_id=contact.id
                         )
@@ -264,7 +281,17 @@ def send_message():
                         db.session.commit()
                         conversation_id = new_conversation.id
 
-                    new_message = Message(content=message_body, conversation_id=conversation_id)
+                    sender_user_id=current_user.id
+                    print("Sender_User_ID:", sender_user_id)
+
+                    new_message = Message(
+                        content=message_body,
+                        conversation_id=conversation_id,
+                        sender_id=sender_user_id,
+                        receiver_number="+1" + str(contact.number),
+                        timestamp=datetime.now(),
+                    )
+
                     db.session.add(new_message)
 
                     try:
@@ -285,6 +312,25 @@ def send_message():
 
     return render_template('dashboard.html', contacts=selected_contacts, form=form)
 
+@app.route('/create_message', methods=['POST'])
+def create_message():
+    if request.method == 'POST':
+
+        user_timezone = pytz.timezone(request.form.get('user_timezone', 'America/Los_Angeles'))
+
+        # Create a timestamp with the correct timezone
+        current_time = datetime.now(pytz.timezone(user_timezone))
+        print("Current Time:", current_time)
+
+        # Create a new message and assign the timestamp
+        message = Message(content=request.form.get('message_content'), timestamp=current_time)
+
+        # Store the message in your database
+        db.session.add(message)
+        db.session.commit()
+
+        # Redirect or render a response as needed
+        return redirect(url_for('some_other_route'))
 
 # Add a route to display and edit contacts
 @app.route('/contacts', methods=['GET', 'POST'])
@@ -328,13 +374,15 @@ def delete_contact(contact_id):
 
     return redirect(url_for('contacts'))
 
-@app.route('/dashboard')
+@app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
+    unread_message_count = 0
+
     user_contacts = current_user.contacts
     form = DashboardForm()
 
-    return render_template('dashboard.html', contacts=user_contacts, form=form)
+    return render_template('dashboard.html', contacts=user_contacts, form=form, unread_message_count=unread_message_count)
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
@@ -403,37 +451,84 @@ def send_password_reset_email(user):
     '''
     mail.send(msg)
 
-# app.debug = True
-
 ##########Receiving Messages##########
+
+# @app.route('/inbox', methods=['GET', 'POST'])
+# @login_required
+# def inbox():
+#     if 'unread_message_count' in session:
+#         unread_message_count = session['unread_message_count']
+#     else:
+#         unread_message_count = 0
+
+#     # Retrieve the user's conversations from the database
+
+#     user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
+
+#     # Retrieve additional data (e.g., contact names and last message snippets)
+#     conversations_data = []
+#     for conversation in user_conversations:
+#         contact_name = get_contact_name(conversation.contact_id)
+#         last_message_snippet = get_last_message_snippet(conversation.id)
+#         messages = Message.query.filter_by(conversation_id=conversation.id).all()
+
+#         conversations_data.append({
+#             'conversation': conversation,
+#             'contact_name': contact_name,
+#             'last_message_snippet': last_message_snippet,
+#             'messages': messages
+#         })
+#     session['unread_message_count']= 0
+#     session.modified = True
+
+#     return render_template('inbox.html', conversations_data=conversations_data, unread_message_count=unread_message_count)
+@app.route('/receive_message', methods=['POST'])
+def receive_message():
+    # Get the message details from the incoming request
+    message_data = request.form  # Adjust this to your actual request data format
+
+    # Your code to process and save the message in the database
+    # ...
+
+    # Increment the unread_message_count
+    if 'unread_message_count' in session:
+        session['unread_message_count'] += 1
+    else:
+        session['unread_message_count'] = 1
+
+    # Mark the message as unread in your database
+    # Assuming you have a Message model and use SQLAlchemy
+    new_message = Message(
+        sender_number=message_data['sender_number'],
+        receiver_number=TWILIO_PHONE_NUMBER,
+        content=message_data['content'],
+        messages_read=False
+    )
+    db.session.add(new_message)
+    db.session.commit()
+
+    return 'Message received and processed'
 
 @app.route('/inbox', methods=['GET', 'POST'])
 @login_required
 def inbox():
+    conversations_data = []
 
-    app.config['SQLALCHEMY_ECHO'] = True
-    # Debugging: Print user's conversation to check if they are retrieved
+    # Check if the inbox was accessed and set the message count
+    if 'inbox_accessed' not in session:
+        session['inbox_accessed'] = True
+        session['unread_message_count'] = 0
 
-    print("User ID:", current_user.id)
-    print("User's Conversations:", current_user.conversations)
-
-    # After the query for user_conversations
- # Print the query results
-    # Retrieve the user's conversations from the database
-
+        # Retrieve the user's conversations from the database
     user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
 
-    print("SQL Query:", str(user_conversations))  # Print the SQL query
-    print("Query Results:", user_conversations)
 
-    # Retrieve additional data (e.g., contact names and last message snippets)
-    conversations_data = []
+        # Retrieve additional data (e.g., contact names and last message snippets)
     for conversation in user_conversations:
-        # You need to implement logic to retrieve contact names and last message snippets
-        # For example, you can query the database to get this information
         contact_name = get_contact_name(conversation.contact_id)
         last_message_snippet = get_last_message_snippet(conversation.id)
-        messages = Message.query.filter_by(conversation_id=conversation.id).all()
+        # messages = Message.query.filter_by(conversation_id=conversation.id).all()
+        messages = conversation.messages
 
         conversations_data.append({
             'conversation': conversation,
@@ -441,14 +536,16 @@ def inbox():
             'last_message_snippet': last_message_snippet,
             'messages': messages
         })
-    print("Data Population:", conversations_data)
 
-    return render_template('inbox.html', conversations_data=conversations_data)
+        # Set the initial message count
+    unread_message_count = session.get('unread_message_count', 0)
+    # else:
+    #     # Don't reset the message count
+    #     unread_message_count = session.get('unread_message_count', 0)
+
+    return render_template('inbox.html', conversations_data=conversations_data, unread_message_count=unread_message_count)
 
 def get_contact_name(contact_id):
-    # Implement logic to retrieve the contact's name based on the contact_id
-    # You may need to query your database or use your data model to fetch this information
-    # For example:
     contact = Contact.query.get(contact_id)
     if contact:
         contact_name = f"{contact.first_name} {contact.last_name}"
@@ -458,9 +555,6 @@ def get_contact_name(contact_id):
         return "Unknown Contact"
 
 def get_last_message_snippet(conversation_id):
-    # Implement logic to retrieve the last message snippet for a conversation
-    # You may need to query your database or use your data model to fetch this information
-    # For example:
     last_message = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.id.desc()).first()
     if last_message:
         return last_message.content[:50]  # Return the first 50 characters of the message content
@@ -477,13 +571,7 @@ def view_conversation(conversation_id):
     return render_template('conversation.html', conversation=conversation, messages=messages, contact_name=contact_name)
 
 def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
-    print("obtain_conversation_id")
-    print(f"Sender Number: {sender_number}")
-    print(f"Receiver Number: {receiver_number}")
-    # Implement your logic here to retrieve or create a conversation and obtain its ID
-    # This might involve querying your database or some other method specific to your application
-    # For example:
-    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first()
+    conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()
     if conversation:
         return conversation.id
     else:
@@ -492,9 +580,6 @@ def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
         db.session.add(new_conversation)
         db.session.commit()
         return new_conversation.id
-
-print("Test")
-
 
 def csrf_exempt(view):
     @wraps(view)
@@ -527,28 +612,31 @@ def get_contact_id(sender_number):
 @app.route('/incoming_sms', methods=['POST'])
 @csrf_exempt
 def incoming_sms():
-    # message_body = request.form.get('Body')
-    # print(message_body)
-    print(request)
     if request.method == 'POST':
         print("Incoming SMS route is triggered")
+
     message_body = request.form.get('Body')
-    print(message_body)
+    print("Message Body:", message_body)
+
     sender_number = request.form.get('From')
-    print(sender_number)
+    print("Sender Number:", sender_number)
     receiver_number = request.form.get('To')
-    print(receiver_number)
-    # user_id = current_user.id
+    print("Receiver Number:", receiver_number)
 
-    user_id = get_user_id(sender_number)
+    # Obtain the sender's information, conversation_id, and other necessary data
+    sender_user_id = get_user_id(sender_number)
+    print("Sender_User_ID:", sender_user_id)
 
-    contact_id = get_contact_id(sender_number)
+    contact_id = get_contact_id(receiver_number)
 
     # You need to obtain the conversation_id here, whether from the request or elsewhere
-    conversation_id = obtain_conversation_id(sender_number, receiver_number, user_id, contact_id)
+    conversation_id = obtain_conversation_id(receiver_number, sender_number, sender_user_id, contact_id)
+
+    # Set the receiver_number to the Twilio number
+    receiver_number = TWILIO_PHONE_NUMBER
 
     # Create a new message with the obtained conversation_id
-    new_message = Message(content=message_body, conversation_id=conversation_id)
+    new_message = Message(content=message_body, conversation_id=conversation_id, sender_id=sender_user_id, receiver_number=receiver_number)
 
     # Store the new message in the database
     db.session.add(new_message)
@@ -557,6 +645,48 @@ def incoming_sms():
     # After processing, you can redirect the user to their inbox or conversation
     return redirect(url_for('inbox'))
 
+@app.route('/get_unread_message_count', methods=['GET'])
+@login_required
+def get_unread_message_count():
+    # Check if the inbox was accessed and set the message count
+    if 'inbox_accessed' in session:
+        session.pop('unread_message_count', None)
+        session.pop('inbox_accessed', None)
+        unread_message_count = 0
+    else:
+        unread_message_count = Message.query.filter(
+            and_(Message.messages_read == False, Message.receiver_number == TWILIO_PHONE_NUMBER)
+        ).count()
+
+    # Return the count as JSON
+    return jsonify({'count': unread_message_count})
+
+app.config['unread_message_count'] = 0
+
+
+@app.route('/mark_message_as_read/<message_id>', methods=['POST'])
+@login_required
+def mark_message_as_read(message_id):
+    # Your code to mark the message as read in the database
+    message = Message.query.get(message_id)
+    if message:
+        message.messages_read = True
+        db.session.commit()
+
+        app.config['unread_message_count'] -= 1  # Decrement the unread_message_count
+
+    return redirect('/inbox')  # Redirect back to the inbox
+
+# Your code to receive and handle incoming messages
+def handle_incoming_message(message):
+    # Your code to process and save the message
+    # ...
+
+    # Increment the unread_message_count
+    if 'unread_message_count' in session:
+        session['unread_message_count'] += 1
+    else:
+        session['unread_message_count'] = 1
 @app.route('/conversation/<int:conversation_id>/respond', methods=['GET', 'POST'])
 @login_required
 def respond_to_conversation(conversation_id):

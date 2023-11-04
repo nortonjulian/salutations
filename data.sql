@@ -10,6 +10,8 @@ DROP TABLE IF EXISTS "conversations" CASCADE;
 -- Check if the "messages" table exists and drop it if it does
 DROP TABLE IF EXISTS "messages" CASCADE;
 
+DROP TABLE IF EXISTS twilio_number_association;
+
 -- Create the "users" table
 CREATE TABLE "users" (
     id SERIAL PRIMARY KEY,
@@ -37,6 +39,7 @@ CREATE TABLE "conversations" (
     receiver_number VARCHAR(255) NOT NULL,
     user_id INTEGER NULL,
     contact_id INTEGER NULL,
+    messages_read BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES "users" (id),
     FOREIGN KEY (contact_id) REFERENCES "contacts" (id)
 );
@@ -46,7 +49,12 @@ CREATE TABLE "messages" (
     id SERIAL PRIMARY KEY,
     content text NOT NULL,
     conversation_id INTEGER NOT NULL,
-    FOREIGN KEY (conversation_id) REFERENCES "conversations" (id)
+    sender_id INTEGER NULL,
+    receiver_number VARCHAR(255) NULL,
+    timestamp TIMESTAMP WITHOUT TIME ZONE NULL,
+    messages_read BOOLEAN,
+    FOREIGN KEY (conversation_id) REFERENCES "conversations" (id),
+    FOREIGN KEY (sender_id) REFERENCES "users" (id)
 );
 
 -- Create the "twilio_number_association" table
@@ -78,12 +86,11 @@ VALUES
   (1, 'sender_number1', 'receiver_number1', 1),
   (2, 'sender_number2', 'receiver_number2', 2);
 
--- Insert sample message data into the "messages" table
--- You can add message data as needed
-INSERT INTO "messages" (content, conversation_id)
+-- Insert a message without specifying a receiver number
+INSERT INTO "messages" (content, conversation_id, sender_id)
 VALUES
-    ('Hello, how are you?', 1),
-    ('Doing well, thanks!', 2);
+    ('Hello, how are you?', 1, 1),
+    ('Doing well, thanks!', 2, 2);
 
 -- Insert sample twilio number associations
 -- You can add associations as needed

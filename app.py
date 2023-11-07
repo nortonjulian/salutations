@@ -522,7 +522,6 @@ def inbox():
         # Retrieve the user's conversations from the database
     user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
 
-
         # Retrieve additional data (e.g., contact names and last message snippets)
     for conversation in user_conversations:
         contact_name = get_contact_name(conversation.contact_id)
@@ -568,18 +567,10 @@ def view_conversation(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
     messages = conversation.messages
     contact_name = get_contact_name(conversation.contact_id)
+    for message in conversation.messages:
+        message.messages_read = True
+    db.session.commit()
     return render_template('conversation.html', conversation=conversation, messages=messages, contact_name=contact_name)
-
-# def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
-#     conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()
-#     if conversation:
-#         return conversation.id
-#     else:
-#         # Create a new conversation if it doesn't exist and return its ID
-#         new_conversation = Conversation(sender_number=sender_number, receiver_number=receiver_number, user_id=user_id, contact_id=contact_id)
-#         db.session.add(new_conversation)
-#         db.session.commit()
-#         return new_conversation.id
 
 def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
     conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()
@@ -664,44 +655,23 @@ def incoming_sms():
 @login_required
 def get_unread_message_count():
     # Check if the inbox was accessed and set the message count
+    print("get_unread_message_count")
+    print(session)
     if 'inbox_accessed' in session:
         session.pop('unread_message_count', None)
         session.pop('inbox_accessed', None)
         unread_message_count = 0
-    else:
-        unread_message_count = Message.query.filter(
-            and_(Message.messages_read == False, Message.receiver_number == TWILIO_PHONE_NUMBER)
-        ).count()
+
+    unread_message_count = Message.query.filter(
+        and_(Message.messages_read == False, Message.receiver_number == TWILIO_PHONE_NUMBER)
+    ).count()
+
+    app.config['unread_message_count'] = unread_message_count
 
     # Return the count as JSON
     return jsonify({'count': unread_message_count})
 
-app.config['unread_message_count'] = 0
 
-
-@app.route('/mark_message_as_read/<message_id>', methods=['POST'])
-@login_required
-def mark_message_as_read(message_id):
-    # Your code to mark the message as read in the database
-    message = Message.query.get(message_id)
-    if message:
-        message.messages_read = True
-        db.session.commit()
-
-        app.config['unread_message_count'] -= 1  # Decrement the unread_message_count
-
-    return redirect('/inbox')  # Redirect back to the inbox
-
-# Your code to receive and handle incoming messages
-def handle_incoming_message(message):
-    # Your code to process and save the message
-    # ...
-
-    # Increment the unread_message_count
-    if 'unread_message_count' in session:
-        session['unread_message_count'] += 1
-    else:
-        session['unread_message_count'] = 1
 @app.route('/conversation/<int:conversation_id>/respond', methods=['GET', 'POST'])
 @login_required
 def respond_to_conversation(conversation_id):
@@ -742,7 +712,6 @@ def respond_to_conversation(conversation_id):
         return redirect(url_for('view_conversation', conversation_id=conversation_id))
 
     return render_template('response-form.html', form=form, conversation_id=conversation_id)
-
 
 print("Before main block")
 app.debug = True

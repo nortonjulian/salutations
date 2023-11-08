@@ -21,7 +21,7 @@ import logging
 from models import User, Contact, Conversation, Message, TwilioNumberAssociation
 
 app = Flask(__name__, template_folder='templates')
-moment = Moment(app)
+
 # db = SQLAlchemy()
 
 csrf = CSRFProtect(app)

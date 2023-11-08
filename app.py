@@ -2,7 +2,6 @@
 print("Flask application started")
 from datetime import datetime
 from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort, jsonify, session
-from flask_moment import Moment
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
 from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm, ResponseForm

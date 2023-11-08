@@ -1,5 +1,3 @@
-# Add this at the beginning of your app.py
-print("Flask application started")
 from datetime import datetime
 from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user

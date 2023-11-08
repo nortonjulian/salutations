@@ -90,7 +90,6 @@ class User(db.Model, UserMixin):  # Inherit from UserMixin here
             except:
                 return None
             return User.query.get(data['reset_password'])
-
 class Contact(db.Model):
     """Table of contacts"""
 
@@ -142,6 +141,7 @@ class Conversation(db.Model):
         self.receiver_number = receiver_number
         self.contact_id = contact_id
 
+timestamp = datetime.utcnow().replace(tzinfo=pytz.utc)
 class Message(db.Model):
     __tablename__ = 'messages'
 
@@ -150,7 +150,7 @@ class Message(db.Model):
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     receiver_number = db.Column(db.String, nullable=False)
-    timestamp = db.Column(DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     messages_read = db.Column(db.Boolean, default=False)
 
     # Define the relationship to the User model for the sender
@@ -159,25 +159,16 @@ class Message(db.Model):
     # Remove the back_populates and backref from the conversation relationship
     conversation = db.relationship('Conversation', back_populates='messages', overlaps='messages')
 
-    # def formatted_timestamp(self):
-
-    #     desired_timezone = pytz.timezone('America/Los_Angeles')
-    #     localized_time = self.timestamp.astimezone(desired_timezone)
-
-    #     formatted_time = localized_time.strftime("%A, %I:%M %p, %B %d, %Y")
-    #     return formatted_time.lstrip("0").replace(" 0", " ")
-
     def formatted_timestamp(self):
-        # Subtract 6 hours from the timestamp
-        six_hours_ago = self.timestamp - timedelta(hours=5)
+            # Subtract 6 hours from the timestamp
+            six_hours_ago = self.timestamp - timedelta(hours=6)
 
-        desired_timezone = pytz.timezone('America/Los_Angeles')
-        localized_time = six_hours_ago.astimezone(desired_timezone)
+            desired_timezone = pytz.timezone('America/Los_Angeles')
+            # localized_time = self.timestamp.astimezone(desired_timezone)
+            localized_time = six_hours_ago.astimezone(desired_timezone)
 
-        formatted_time = localized_time.strftime("%A, %I:%M %p, %B %d, %Y")
-        return formatted_time.lstrip("0").replace(" 0", " ")
-
-
+            formatted_time = localized_time.strftime("%A, %I:%M %p, %B %d, %Y")
+            return formatted_time.lstrip("0").replace(" 0", " ")
 class TwilioNumberAssociation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     twilio_number = db.Column(db.String(15), unique=True, nullable=False)
@@ -189,8 +180,6 @@ class TwilioNumberAssociation(db.Model):
     def __init__(self, twilio_number, user_id):
         self.twilio_number = twilio_number
         self.user_id = user_id
-
-
 
 
 # def connect_db(app):

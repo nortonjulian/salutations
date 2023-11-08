@@ -2,6 +2,7 @@
 print("Flask application started")
 from datetime import datetime
 from flask import Flask, current_app, render_template, redirect, url_for, flash, request, abort, jsonify, session
+from flask_moment import Moment
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import Serializer, BadSignature, SignatureExpired
 from forms import RegistrationForm, LoginForm, DashboardForm, ContactForm, ForgotPasswordForm, ResetPasswordForm, ResponseForm
@@ -21,6 +22,7 @@ import logging
 from models import User, Contact, Conversation, Message, TwilioNumberAssociation
 
 app = Flask(__name__, template_folder='templates')
+moment = Moment(app)
 # db = SQLAlchemy()
 
 csrf = CSRFProtect(app)
@@ -28,8 +30,6 @@ csrf.init_app(app)
 
 app.config.update(WTF_CSRF_ENABLED=False,
                   WTF_CSRF_METHODS=['POST'])
-
-
 
 app.config['WTF_CSRF_EXEMPT_ROUTES'] = ['/incoming_sms']
 
@@ -232,7 +232,7 @@ def send_message():
                  conversation_id=conversation_id,
                  sender_id=sender_user_id,
                  receiver_number=manual_number,
-                 timestamp=datetime.now(),
+                 timestamp=datetime.utcnow(),
                  read=False
             )
 
@@ -289,7 +289,7 @@ def send_message():
                         conversation_id=conversation_id,
                         sender_id=sender_user_id,
                         receiver_number="+1" + str(contact.number),
-                        timestamp=datetime.now(),
+                        timestamp=datetime.utcnow(),
                     )
 
                     db.session.add(new_message)
@@ -453,35 +453,6 @@ def send_password_reset_email(user):
 
 ##########Receiving Messages##########
 
-# @app.route('/inbox', methods=['GET', 'POST'])
-# @login_required
-# def inbox():
-#     if 'unread_message_count' in session:
-#         unread_message_count = session['unread_message_count']
-#     else:
-#         unread_message_count = 0
-
-#     # Retrieve the user's conversations from the database
-
-#     user_conversations = Conversation.query.filter_by(user_id=current_user.id).all()
-
-#     # Retrieve additional data (e.g., contact names and last message snippets)
-#     conversations_data = []
-#     for conversation in user_conversations:
-#         contact_name = get_contact_name(conversation.contact_id)
-#         last_message_snippet = get_last_message_snippet(conversation.id)
-#         messages = Message.query.filter_by(conversation_id=conversation.id).all()
-
-#         conversations_data.append({
-#             'conversation': conversation,
-#             'contact_name': contact_name,
-#             'last_message_snippet': last_message_snippet,
-#             'messages': messages
-#         })
-#     session['unread_message_count']= 0
-#     session.modified = True
-
-#     return render_template('inbox.html', conversations_data=conversations_data, unread_message_count=unread_message_count)
 @app.route('/receive_message', methods=['POST'])
 def receive_message():
     # Get the message details from the incoming request
@@ -560,6 +531,27 @@ def get_last_message_snippet(conversation_id):
     else:
         return "No Messages"
 
+# @app.route('/conversation/<int:conversation_id>')
+# @login_required
+# def view_conversation(conversation_id):
+#     # Retrieve the conversation and its messages
+#     conversation = Conversation.query.get_or_404(conversation_id)
+#     messages = conversation.messages
+#     contact_name = get_contact_name(conversation.contact_id)
+
+#     for message in conversation.messages:
+#         message.messages_read = True
+#         db.session.commit()
+
+#     messages_with_timestamp = []
+#     for message in messages:
+#         messages_with_timestamp.append({
+#             "content": message.content,
+#             "formatted_timestamp": message.formatted_timestamp()
+#         })
+
+#     return render_template('conversation.html', conversation=conversation, messages=messages_with_timestamp, contact_name=contact_name)
+
 @app.route('/conversation/<int:conversation_id>')
 @login_required
 def view_conversation(conversation_id):
@@ -567,10 +559,25 @@ def view_conversation(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
     messages = conversation.messages
     contact_name = get_contact_name(conversation.contact_id)
+
     for message in conversation.messages:
         message.messages_read = True
-    db.session.commit()
-    return render_template('conversation.html', conversation=conversation, messages=messages, contact_name=contact_name)
+        db.session.commit()
+
+    messages_with_timestamp = []
+    for message in messages:
+        messages_with_timestamp.append({
+            "content": message.content,
+            "formatted_timestamp": message.formatted_timestamp()
+        })
+
+    # Debugging: Check the type and contents of messages_with_timestamp
+    print("Type of messages_with_timestamp:", type(messages_with_timestamp))
+    for message in messages_with_timestamp:
+        print("Message with timestamp:", message)
+
+    return render_template('conversation.html', conversation=conversation, messages=messages_with_timestamp, contact_name=contact_name)
+
 
 def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
     conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()
@@ -670,7 +677,6 @@ def get_unread_message_count():
 
     # Return the count as JSON
     return jsonify({'count': unread_message_count})
-
 
 @app.route('/conversation/<int:conversation_id>/respond', methods=['GET', 'POST'])
 @login_required

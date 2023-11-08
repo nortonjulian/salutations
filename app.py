@@ -206,6 +206,7 @@ def send_message():
 
             if existing_conversation:
                 conversation_id = existing_conversation.id
+                sender_user_id = existing_conversation.user_id
                 print("Using existing conversation")
             else:
                 print("Creating new conversation")
@@ -219,15 +220,13 @@ def send_message():
                 db.session.add(new_conversation)
                 db.session.commit()
                 conversation_id = new_conversation.id
-            print("$$$$$$$$$$$$$$$$$$$$$ - Outgoing")
-            print(conversation_id)
 
             sender_user_id = current_user.id
             print("Sender_User_ID:", sender_user_id)
             new_message = Message(
                  content=message_body,
                  conversation_id=conversation_id,
-                 sender_id=sender_user_id,
+                 sender_id=current_user.id,
                  receiver_number=manual_number,
                  timestamp=datetime.utcnow(),
                  read=False
@@ -265,6 +264,7 @@ def send_message():
 
                     if existing_conversation:
                         conversation_id = existing_conversation.id
+                        sender_user_id = existing_conversation.user_id
                         print("Using existing conversation")
                     else:
                         print("Creating new conversation")
@@ -284,12 +284,13 @@ def send_message():
                     new_message = Message(
                         content=message_body,
                         conversation_id=conversation_id,
-                        sender_id=sender_user_id,
+                        sender_id=current_user.id,
                         receiver_number="+1" + str(contact.number),
                         timestamp=datetime.utcnow(),
                     )
 
                     db.session.add(new_message)
+                    print(f"Sender_ID when creating message: {new_message.sender_id}")
 
                     try:
                         twilio_client.messages.create(
@@ -495,20 +496,16 @@ def inbox():
         contact_name = get_contact_name(conversation.contact_id)
         last_message_snippet = get_last_message_snippet(conversation.id)
         # messages = Message.query.filter_by(conversation_id=conversation.id).all()
-        messages = conversation.messages
+        # messages = conversation.messages
 
         conversations_data.append({
             'conversation': conversation,
             'contact_name': contact_name,
-            'last_message_snippet': last_message_snippet,
-            'messages': messages
+            'last_message_snippet': last_message_snippet
         })
 
         # Set the initial message count
     unread_message_count = session.get('unread_message_count', 0)
-    # else:
-    #     # Don't reset the message count
-    #     unread_message_count = session.get('unread_message_count', 0)
 
     return render_template('inbox.html', conversations_data=conversations_data, unread_message_count=unread_message_count)
 
@@ -524,9 +521,19 @@ def get_contact_name(contact_id):
 def get_last_message_snippet(conversation_id):
     last_message = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.id.desc()).first()
     if last_message:
-        return last_message.content[:50]  # Return the first 50 characters of the message content
-    else:
-        return "No Messages"
+        return last_message.content[:50]
+    return "No Messages"
+
+# def get_last_message_snippet(conversation_id):
+#     last_message = Message.query.filter(
+#         (Message.conversation_id == conversation_id) &
+#         (Message.sender_id != current_user.id)
+#     ).order_by(Message.timestamp.desc()).first()
+
+#     if last_message:
+#         return last_message.content[:50]
+#     return "No Messages"
+
 
 # @app.route('/conversation/<int:conversation_id>')
 # @login_required
@@ -574,7 +581,6 @@ def view_conversation(conversation_id):
         print("Message with timestamp:", message)
 
     return render_template('conversation.html', conversation=conversation, messages=messages_with_timestamp, contact_name=contact_name)
-
 
 def obtain_conversation_id(sender_number, receiver_number, user_id, contact_id):
     conversation = Conversation.query.filter_by(sender_number=sender_number, receiver_number=receiver_number).first() or Conversation.query.filter_by(sender_number=receiver_number, receiver_number=sender_number).first()

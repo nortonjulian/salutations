@@ -5,9 +5,13 @@
 
     <div class="conversation-messages">
         {% for message in messages %}
-            <div class="message">
+            <div class="message {% if message.sender_id == current_user.id %}sent-message{% else %}received-message{% endif %}">
                 <p>{{ message.content }}</p>
                 <p class="message-timestamp">{{ message.formatted_timestamp }}</p>
+                <p>sender_id: {{ message.sender_id }}, current_user.id: {{ current_user.id }}</p>
+
+                <p>message.sender_id: {{ message.sender_id }}</p>
+                <p>current_user.id: {{ current_user.id }}</p>
             </div>
         {% endfor %}
     </div>

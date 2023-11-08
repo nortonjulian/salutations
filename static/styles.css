@@ -38,6 +38,25 @@ input[type="checkbox"] {
   margin: 5px;
 }
 
+/* Style for sent (outgoing) messages */
+.sent-message {
+  background-color: lightgray;
+  color: black;
+  max-width: 70%; /* Adjust as needed */
+  padding: 5px;
+  border-radius: 10px;
+  margin: 5px;
+}
+
+/* Style for received (incoming) messages */
+.received-message {
+  background-color: royalblue;
+  color: white;
+  max-width: 70%; /* Adjust as needed */
+  padding: 5px;
+  border-radius: 10px;
+  margin: 5px;
+}
 
 /* Apply styles for mobile devices (320px - 480px) */
 @media (min-width: 320px) and (max-width: 480px) {
